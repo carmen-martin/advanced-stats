@@ -1,0 +1,374 @@
+---
+title: "Laboratory 01"
+output:
+  html_document:
+    df_print: paged
+---
+
+Carmen Martín Turrero
+
+---
+
+Date : 24/03/2022
+
+---
+
+```{r}
+#imports
+library(ggplot2)
+library(plyr)
+
+```
+
+---
+
+Exercise 1 - Vectors and data frames
+---
+
+1.1. Evaluate the highest and lowest volume and area lakes.
+
+```{r}
+# Definition of vectors with lake names and parameters
+
+loch <- c('Loch Ness','Loch Lomond','Loch Morar','Loch Tay','Loch Awe', 'Loch Maree','Loch Ericht','Loch Lochy','Loch Rannoch','Loch Shiel','Loch Katrine','Loch Arkaig','Loch Shin')
+volume <- c(7.45, 2.6, 2.3, 1.6, 1.2, 1.09, 1.08, 1.07, 0.97, 0.79, 0.77, 0.75, 0.35)
+area <- c(56, 71, 27, 26.4, 39, 28.6, 18.6, 16, 19, 19.5, 12.4, 16, 22.5)
+length <- c(39, 36, 18.8, 23, 41, 20, 23, 16, 15.7, 28, 12.9, 19.3, 27.8)
+max_depth <- c(230, 190, 310, 150, 94, 114, 156, 162, 134, 128, 151, 109, 49)
+mean_depth <- c(132, 37, 87, 60.6, 32, 38, 57.6, 70, 51, 40, 43.4, 46.5, 15.5)
+
+scottish.lakes <- data.frame(loch, volume, area, length, max_depth, mean_depth)
+
+scottish.lakes
+
+```
+```{r}
+# Find lakes with lowest and highest areas
+
+message('Minimum area lake: ', scottish.lakes$loch[which.min(scottish.lakes$area)])
+message('Maximum area lake: ', scottish.lakes$loch[which.max(scottish.lakes$area)])
+
+
+#Find lakes with lowest and highest volumes
+
+message('Minimum volume lake: ', scottish.lakes$loch[which.min(scottish.lakes$volume)])
+message('Maximum volume lake: ', scottish.lakes$loch[which.max(scottish.lakes$volume)])
+
+```
+
+1.2. Order the frame with respect to the area and determine the two largest area lakes.
+```{r}
+# Order the lakes by area
+
+scottish.lakes <- scottish.lakes[order(area, decreasing = TRUE),]
+scottish.lakes
+
+# Find the two lakes with largest areas
+
+message('Lakes with largest area: ', scottish.lakes$loch[1],', ', scottish.lakes$loch[2])
+
+```
+1.3. By summing up the areas occupied by the lakes, determine the area of Scotland covered by water.
+```{r}
+# Calculate total area 
+lakearea <- sum(scottish.lakes$area)
+message('The total water surface of Scotland is ', lakearea, ' km2.')
+
+```
+
+---
+
+Exercise 2 - Crude Oil Production
+---
+
+2.1. Write R code that is able to read the file and import it in a data frame structure.
+
+```{r}
+# Upload the file
+oil.df <- read.csv("/Users/cmart/Documents/Universidad/Master/Second Semester/Advanced Statistics/Labs/crude-oil-prices.csv", header = TRUE, sep = ',')
+
+#Change the name of the column so its easier to call
+colnames(oil.df)[4] <- 'Price'
+oil.df
+
+```
+2.2. Produce a plot with the Oil price as a function of the year.
+```{r}
+# Plot year vs oil price
+plot(oil.df$Year, oil.df$Price, type = 'b', xlab = 'Year', ylab = 'Price (US dollars per barrel)', main = 'Prices of oil between 1861 and 2020')
+
+```
+2.3. Which is the highest price in history? When did it occur?
+```{r}
+# Find year with maximum price
+cat('Maximum price of oil from 1861 to 2020 was of', round(oil.df$Price[which.max(oil.df$Price)],digits=2), 'US dollars per barrell in the year', oil.df$Year[which.max(oil.df$Price)],'.')
+
+```
+2.4. Plot the derivative of the curve, simply evaluated with the finite difference formula (forward derivative).
+```{r}
+der <- 0
+for (i in 1:(length(oil.df$Price)-1))
+  der <- append(der, oil.df$Price[i+1] - oil.df$Price[i])
+
+plot(oil.df$Year,der, type = 'l', main = 'Derivative of the curve (d(Price)/d(Year))', xlab = 'Year', ylab = 'Derivative')
+```
+
+---
+
+Exercise 3 - World Coal Production
+---
+
+3.1. Write R code that is able to read the file and import it in a tibble structure.
+```{r}
+#Load the data
+coal_df <- readxl::read_xlsx("/Users/cmart/Documents/Universidad/Master/Second Semester/Advanced Statistics/Labs/coal-production-by-country.xlsx", col_names = TRUE)
+
+coal_df
+```
+3.2. Count the number of countries available in the file and produce a barplot with the number of entries for each country.
+
+```{r}
+# Find the number of different countries in our data frame
+n.countries <- length(unique(coal_df$Entity))
+
+cat('Countries in the database:', n.countries)
+
+```
+```{r Fig, fig.height = 15, fig.width=5}
+# The table function provides the number of counts for each country
+par(mar=c(5,8,1,1), cex.axis=0.5)
+barplot(table(coal_df$Entity), horiz = TRUE,col="#69b3a2", las = 2, 
+        main = 'Entities in the database', 
+        xlab = 'Number of entries')
+```
+3.3. Selecting only the year after 1970, determine the total integrated production for each country and print the top 5 Countries with highest coal productions.
+```{r}
+# Select only the rows corresponding to years after 1970
+coal.1970 <- coal_df[coal_df$Year>1970,]
+
+# Change the name of column for easier handling
+colnames(coal.1970)[4] <- 'coal_production'
+
+# Sum the production over the years for each entity
+total.production <- ddply(coal.1970, .(Entity), summarise, coal_total_prod=sum(as.numeric(coal_production)))
+
+# Sort the data by production quantity
+total.production <- total.production[order(-total.production$coal_total_prod),]
+
+# By observing the data we infer the result:
+#total_production
+cat("The 5 countries with highest coal productions are: China, US, Russia, Australia and India") 
+
+total.production <- total.production[total.production$Entity %in% c("China" , "Russia", "United States", "Australia", "India"),]
+colnames(total.production)[2] <- 'Total coal production (TWh)'
+total.production
+
+```
+3.4. For the 5 top Countries, create a plot of production as a function of time.
+```{r}
+# Select the appropiate rows from the dataframe
+top5.df <- coal.1970[coal.1970$Entity %in% c("China" , "Russia", "United States", "Australia", "India"),]
+top5.df
+# Plot production as a function of time
+plot(top5.df$Year[top5.df$Entity == "China"], top5.df$coal_production[top5.df$Entity == "China"] , type = 'p', col = 'red', xlab = 'Year', ylab = 'Coal Production (TWh)', main = 'Coal Production between 1970 and 2020')
+
+lines(top5.df$Year[top5.df$Entity == "United States"], top5.df$coal_production[top5.df$Entity == "United States"] , type ='p', col = 'blue')
+
+lines(top5.df$Year[top5.df$Entity == "India"], top5.df$coal_production[top5.df$Entity == "India"] , type ='p', col = 'orange')
+
+lines(top5.df$Year[top5.df$Entity == "Russia"], top5.df$coal_production[top5.df$Entity == "Russia"] , type ='p', col = 'black')
+
+lines(top5.df$Year[top5.df$Entity == "Australia"], top5.df$coal_production[top5.df$Entity == "Australia"] , type ='p', col = 'green')
+
+legend("topleft", legend = c("China", "United States", "India", "Russia", "Australia"),
+       col = c("red", "blue", "orange", "black", "green"), pch = 1)
+
+```
+3.5. Generate a plot with the cumulative sum of the World’s coal production over the years.
+
+```{r}
+
+# Create a data set with just the World Data
+world.coal <- coal.1970[coal.1970$Entity == "World",]
+
+# Perform the cumulative sum
+world.coalc <- ddply(world.coal, .(Entity), summarise, cum=cumsum(as.numeric(coal_production)))
+
+# PLot the results
+plot(world.coal$Year, world.coalc$cum , type = 'l', col = 'purple', xlab = 'Year', ylab = 'Cumulative Coal Production (TWh)', main = 'World Cumulative Coal Production between 1970 and 2020')
+
+```
+
+---
+
+Exercise 4 - Covid19 Vaccine Data
+---
+```{r}
+
+# Upload the data
+
+vacc.manufacturer <- read.csv("/Users/cmart/Documents/Universidad/Master/Second Semester/Advanced Statistics/Labs/vaccinations-by-manufacturer.csv", header = TRUE, sep = ',')
+
+#See columns we have and size of dataframe
+names(vacc.manufacturer)
+dim(vacc.manufacturer)
+
+#See the types of vaccines we have
+unique(vacc.manufacturer$vaccine)
+
+# We need to transform the date column to a R dateclass
+vacc.manufacturer$date <- as.Date(vacc.manufacturer$date, format = "%Y-%m-%d")
+
+```
+
+
+4.1. filter the original tibble by selecting the following countries: Italy.
+
+```{r}
+# Select only Italy's vaccination data
+vacc.italy <- vacc.manufacturer[vacc.manufacturer$location == "Italy",]
+
+vacc.italy
+```
+
+4.2. Plot the number of vaccines given as a function of time for the different vaccine manufacturer.
+
+```{r}
+# Plot
+options(scipen=999) 
+g.italy <- ggplot(vacc.italy, aes(x = date, y = total_vaccinations)) + 
+  geom_line(aes(col=vaccine), size=0.7) + xlab('Date') + 
+  ylab('Number of vaccines') + ggtitle('Covid-19 Vaccination in Italy') +
+  scale_colour_brewer(palette = "Set2") + 
+  scale_x_date(date_breaks = '3 months', date_labels = '%b %Y') +
+  scale_y_continuous(labels = function(x){paste0((x/1000000), 'M')}) +
+  guides(color=guide_legend("Manufacturer", order = 5))
+
+plot(g.italy)
+
+```
+
+4.3. From the same tibble plot the total number of vaccines shot per day in Italy.
+
+```{r}
+# Sum the total vaccinations of different manufacturers for each day
+vacc.day <- ddply(vacc.italy, .(date), summarise, total_vaccs=sum(as.numeric(total_vaccinations)))
+
+#Plot
+italy.total <- ggplot(vacc.day, aes(x = date, y = total_vaccs)) + 
+  geom_line(size=0.7) +
+  xlab('Date') + ylab('Number of vaccines') +
+  ggtitle('Covid-19 Vaccination in Italy') +
+  scale_x_date(date_breaks = '3 months', date_labels = '%b %Y') +
+  scale_y_continuous(labels = function(x){paste0((x/1000000), 'M')})
+          
+plot(italy.total)
+```
+
+4.4. Do the same exercise for the following countries: Germany and United States of America
+
+```{r}
+# Germany 
+vacc.germany <- vacc.manufacturer[vacc.manufacturer$location == "Germany",]
+
+# Vaccs per day
+vacc.dayg <- ddply(vacc.germany, .(date), summarise, total_vaccs=sum(as.numeric(total_vaccinations)))
+
+# Plot
+g.germany <- ggplot() + 
+  geom_line(data = vacc.germany, aes(x = date, y = total_vaccinations, col=vaccine), size=0.7) +
+  geom_line(data = vacc.dayg, aes(x = date, y = total_vaccs, col = "Total")) +
+  xlab('Date') + ylab('Number of vaccines') + 
+  ggtitle('Covid-19 Vaccination in Germany') +
+  scale_colour_brewer(palette = "Set2") + 
+  scale_x_date(date_breaks = '3 months', date_labels = '%b %Y') +
+  scale_y_continuous(labels = function(x){paste0((x/1000000), 'M')}) +
+  guides(color=guide_legend("Manufacturer", order = 5))
+
+plot(g.germany)
+
+# United States
+vacc.us <- vacc.manufacturer[vacc.manufacturer$location == "United States",]
+
+# Vaccs per day
+vacc.dayus <- ddply(vacc.us, .(date), summarise, total_vaccs=sum(as.numeric(total_vaccinations)))
+
+g.us <- ggplot() + 
+  geom_line(data = vacc.us, aes(x = date, y = total_vaccinations, col=vaccine), size=0.7) +
+  geom_line(data = vacc.dayus, aes(x = date, y = total_vaccs, col = "Total")) +
+  xlab('Date') + ylab('Number of vaccines') + 
+  ggtitle('Covid-19 Vaccination in United States of America') +
+  scale_colour_brewer(palette = "Set2") + 
+  scale_x_date(date_breaks = '3 months', date_labels = '%b %Y') +
+  scale_y_continuous(labels = function(x){paste0((x/1000000), 'M')}) +
+  guides(color=guide_legend("Manufacturer"))
+
+plot(g.us)
+
+```
+
+With the other vaccination data set:
+
+```{r}
+# Upload the data
+
+vacc.df <- read.csv("/Users/cmart/Documents/Universidad/Master/Second Semester/Advanced Statistics/Labs/vaccinations.csv", header = TRUE, sep = ',')
+
+#See data features we have and size of dataframe
+names(vacc.df)
+dim(vacc.df)
+
+# We need to transform the date column to a R dateclass
+vacc.df$date <- as.Date(vacc.df$date, format = "%Y-%m-%d")
+
+```
+
+4.5. Selecting all the European countries in the tibble, plot the number of daily vaccinations per million as a function of date.
+
+```{r}
+# Select only vaccination in Europe 
+vacc.eu <- vacc.df[vacc.df$location == "Europe",]
+
+g.eu <- ggplot(data = vacc.eu, aes(x = date, y = daily_vaccinations_per_million)) +
+  geom_line() +
+  xlab('Date') + ylab('Daily vaccines per million') + 
+  ggtitle('Covid-19 Vaccination in Europe') +
+  scale_x_date(date_breaks = '2 months', date_labels = '%b %Y')
+
+plot(g.eu)
+
+```
+
+4.6. Study the data structure and produce few relevant plots of your taste.
+
+```{r}
+# Lets find out how they vaccination is distributed among UE countries
+UE.countries <- c('Austria', 'Belgium', 'Bulgaria', 'Croatia', 'Cyprus', 'Czechia', 'Denmark', 'Estonia', 'Finland', 'France', 'Germany', 'Greece', 'Hungary', 'Ireland', 'Italy', 'Latvia', 'Lithuania', 'Luxembourg', 'Malta', 'Netherlands', 'Poland', 'Portugal', 'Romania', 'Slovakia', 'Slovenia', 'Spain', 'Sweden')
+
+vacc.UE <- vacc.df[vacc.df$location %in% UE.countries,]
+
+g.detail <- ggplot(data = vacc.UE, aes(x = date, y = daily_vaccinations)) +
+  geom_line(aes(col = location), size=0.4) +
+  xlab('Date') + ylab('Daily vaccinations') + 
+  ggtitle('Covid-19 Vaccination in Europe') +
+  scale_x_date(date_breaks = '3 months', date_labels = '%b %Y')
+
+
+plot(g.detail)
+```
+
+```{r}
+# Observe vaccinations by continent
+vacc.continent <- vacc.df[vacc.df$location %in% c("Europe" , "Asia", "South America", "North America", "Oceania", "Africa"),]
+
+g.detail <- ggplot(vacc.continent, aes(x = date, y = daily_vaccinations_per_million)) +
+  geom_line(aes(col = location)) +
+  xlab('Date') + ylab('Daily vaccinations per million') + 
+  ggtitle('Covid-19 Vaccination in the World') +
+  scale_x_date(date_breaks = '2 months', date_labels = '%b %Y') +
+  scale_colour_brewer(palette = "Set1")
+
+
+plot(g.detail)
+```
+
