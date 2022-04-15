@@ -1,0 +1,372 @@
+---
+title: "Laboratory 02"
+output: html_notebook
+---
+
+Carmen Martín Turrero
+
+---
+
+Date : 31/03/2022
+
+---
+
+```{r}
+library(ggplot2)
+library(GoFKernel)
+library(latex2exp)
+```
+
+
+---
+
+Exercise 1
+---
+
+A set of measurements have been performed on the concentration of a contaminant in tap water. The following tables reports a set of values (x), with the corresponding probabilities given by the two methods (p1 and p2).
+
+```{r}
+x = c(15.58, 15.9, 16, 16.1, 16.2)
+p1 = c(0.15, 0.21, 0.35, 0.15, 0.14)
+p2 = c(0.14, 0.05, 0.64, 0.08, 0.09)
+```
+
+Evaluate the expected values, E[X], and the variance, Var(X), for both methods.
+
+```{r}
+# First method
+E1 <- sum(x*p1)
+var1 <- sum(x**2*p1) - E1**2
+
+message('First method: E[x] = ', round(E1,3), ', Variance = ', round(var1,3))
+
+#Second method
+E2 <- sum(x*p2)
+var2 <- sum(x**2*p2) - E2**2
+message('Second method: E[x] = ', round(E2, 3), ', Variance = ', round(var2, 3))
+
+```
+
+---
+
+Exercise 2
+---
+The waiting time, in minutes, at the doctor’s is about 30 minutes, and the distribution follows an exponential pdf with rate 1/30.
+
+2.1. Simulate the waiting time for 50 people at the doctor’s office and plot the relative histogram.
+
+```{r}
+w.time <- 30 #minutes
+lambda <- 1/30
+
+# Sampling from the distribution
+sampl <- rexp(50, rate = lambda)
+S <- data.frame(sampl)
+
+g <- ggplot(S, aes(sampl))
+
+g + geom_histogram(binwidth = 3, 
+                   fill = "lightblue",
+                   col="black", 
+                   size=.2) +
+  scale_x_continuous(breaks = seq(0, 210, 30)) +
+  labs(title="Waiting time at the doctor's office", 
+       subtitle="Sample of 50 people",
+       x = "Time (minutes)", y = "# of people")
+
+```
+
+2.2. What is the probability that a person will wait for less than 10 minutes?
+
+```{r}
+#Using the CDF
+cat("P(X<10) = ", pexp(10, lambda))
+```
+
+2.3. Evaluate the average waiting time from the simulated data and compare it with the expected value.
+
+```{r}
+av.wait <- mean(sampl)
+
+cat("The average waiting time derived from the sampling of the distributions is", round(av.wait,2), "minutes, while the expected value is of 30 minutes.")
+
+```
+
+2.4. What is the probability for waiting more than one hour before being received?
+
+```{r}
+#Using the CDF
+cat("P(X>60) = ", 1 - pexp(60, lambda))
+```
+
+---
+
+Exercise 3
+---
+Let’s suppose that on a book, on average, there is one typo error every three pages. If the number of errors follows a Poisson distribution, plot the pdf and cdf, and calculate the probability that there is at least one error on a specific page of the book.
+
+```{r}
+# lambda
+av.typo <- 1/3
+
+# Distributions
+typo.pdf <- dpois(0:10, lambda = av.typo)
+typo.cdf <- ppois(0:10, lambda = av.typo)
+
+# Plot
+options(repr.plot.width=14, repr.plot.height=6)  #to set graph size
+par(mfrow=c(1,2)) 
+plot(x = 0:10, y = typo.pdf, lwd=2.5, pch=15, cex = 0.6, col="darkred",
+     main="Number of typos per page", cex.main=0.9,
+     xlab="x", ylab="pdf(x)", cex.lab=1)
+
+plot(x = 0:10, y = typo.cdf, lwd=2.5, pch=15, cex = 0.6, col="darkblue",
+     main="Number of typos per page", cex.main=0.9,
+     xlab="x", ylab="cdf(X)", cex.lab=1)
+
+# At least one error in a specific page
+cat("Probability of finding at least one error on a specific page:", 1 - typo.cdf[1])
+```
+
+---
+
+Exercise 4
+---
+We randomly draw cards from a deck of 52 cards, with replacement, until one ace is drawn. Calculate the probability that at least 10 draws are needed.
+
+```{r}
+# The probability of drawing an ace from the deck is 4/52:
+p.ace <- 1/13
+
+# Using a geometric distribution we obtain the probability of not picking an ace in the first 9 trials and use normalization to get the probability of needing at least 10 draws
+ace.cdf <- pgeom(1:10, prob = p.ace)
+message("Probability of needing at least 10 draws:", round(1-ace.cdf[9],3))
+```
+
+---
+
+Exercise 5
+---
+
+The time it takes a student to complete a TOLC-I University orientation and evaluation test follows a density function of the form below, where t is the time in hours.
+
+\begin{equation}
+f(t)=
+\begin{cases}
+c(t-1)(2-t) & 1<t<2\\
+0 & \text{otherwise}
+\end{cases}
+\end{equation}
+
+5.1. Using the integrate() R function, determine the constant c (and verify it analytically).
+
+```{r}
+# The integral over the density function must be 1. Therefore, the constant c is given by
+integral <- integrate(function(t){(t-1)*(2-t)}, lower=1, upper=2)
+c <- 1/integral$value
+
+message("c = ",c)
+```
+Lets prove the result analytically:
+
+The integral of the function is 0 if evaluated outside (1,2). Therefore, we obtain:
+
+\begin{equation}
+F(t) = \int_{0}^{\infty} f(t) dt = \int_1^2 c(t-1)(2-t) dt = c \int_1^2 (-t^2+3t-2) dt
+\end{equation}
+
+By solving the integral
+\begin{equation}
+c \int_1^2 (-t^2+3t-2) dt = -c·\frac{2t^3 - 9t^2 +12t}{6}\Biggr|_{1}^2 = \frac{c}{6}
+\end{equation}
+
+And, knowing that the integral must be equal to 1, we get the result of c = 6, which matches the one obtained using the integrate() function.
+
+
+5.2. Write the set of four R functions and plot the pdf and cdf, respectively.
+
+```{r}
+# The four functions are: PDF, CDF, quantile function and sampling from distribution.
+
+# Probability density function
+d.exam <- function(t) {
+  if (1<t & t<2) pdf <- 6*(t-1)*(2-t)
+  else pdf <- 0
+  return (pdf)
+}
+# So we can apply it to vectors value by value:
+d.exam <- Vectorize(d.exam)
+
+# Cumulative density function
+# CDF is the integral of the pdf
+p.exam <- function(t) {
+  return(integrate(d.exam, lower=0, upper=t)$value)
+}
+p.exam <- Vectorize(p.exam)
+
+# Quantile function
+# The quantile function is the inverse of the CDF, we use 'inverse' from GoFKernel library, which is specifically designed to perform the inverse transform of a CDF
+q.exam <- inverse(p.exam, 1, 2) 
+q.exam <- Vectorize(q.exam)
+
+# Sampling from distribution
+r.exam <- function(N, cdf, a, b) {
+    sampl <- runif(N)
+    #invert the CDF in the interval (a, b)
+    rf <- Vectorize(inverse(cdf, a, b)) 
+    return (rf(sampl))
+}
+```
+
+```{r}
+# Plot PDF and CDF
+x <- seq(0.05, 3, 0.05)
+
+options(repr.plot.width=14, repr.plot.height=6)  #to set graph size
+par(mfrow=c(1,2))
+
+plot(x = x, y = d.exam(x), lwd=2.5, pch=15, cex = 0.4, col="darkred",
+     main="Time to complete TOLC - I", cex.main=0.9,
+     xlab="Hours", ylab="pdf(x)", cex.lab=1)
+
+plot(x =x, y = p.exam(x), lwd=2.5, pch=15, cex = 0.4, col="darkblue",
+     main="Time to complete TOLC - I", cex.main=0.9,
+     xlab="Hours", ylab="cdf(X)", cex.lab=1)
+```
+5.3. Evaluate the probability that the student will finish the aptitude test in more than 75 minutes. And that it will take between 90 and 120 minutes.
+
+```{r}
+# We need to convert from minutes to hours, therefore:
+message("P(t>(75min)) = ", round(1 - p.exam(75/60),4))
+message("P((90min)<t<(120min)) = ", p.exam(120/60) - p.exam(90/60))
+```
+
+---
+
+Exercise 6
+---
+
+The lifetime of tires sold by an used tires shop is $10^4 x$ km, where $x$ is a random variable following the distribution function below
+
+\begin{equation}
+f(t)=
+\begin{cases}
+\frac{2}{x^2} & 1<t<2\\
+0 & \text{otherwise}
+\end{cases}
+\end{equation}
+
+6.1. Write the set of four R functions and plot the pdf and cdf, respectively.
+
+```{r}
+# Lifetime of tires
+tire.lf <- function(x){10**4*x} #x in kilometers
+
+# x follows the distribution described by:
+# Probability density function
+d.tires <- function(x) {
+  if (1<x & x<2) pdf <- 2/(x**2)
+  else pdf <- 0
+  return (pdf)
+}
+d.tires <- Vectorize(d.tires)
+
+# Cumulative density function
+# CDF is the integral of the pdf
+p.tires <- function(x) {
+  return(integrate(d.tires, lower=0, upper=x)$value)
+}
+p.tires <- Vectorize(p.tires)
+
+# Quantile function
+# The quantile function is the inverse of the CDF, we use 'inverse' from GoFKernel library, which is specifically designed to perform the inverse transform of a CDF
+q.tires <- inverse(p.tires, 1, 2) 
+q.tires <- Vectorize(q.tires)
+
+# Sampling from distribution
+r.tires <- function(N, cdf, a, b) {
+    sampl <- runif(N)
+    #invert the CDF in the interval (a, b)
+    rf <- Vectorize(inverse(cdf, a, b)) 
+    return (rf(sampl))
+}
+```
+
+```{r}
+# Plot PDF and CDF
+
+# We have to adjust the kilometers to our scale
+x <- seq(5000/10000,25000/10000, 0.05)
+
+options(repr.plot.width=14, repr.plot.height=6)  #to set graph size
+par(mfrow=c(1,2))
+
+plot(x = x, y = d.tires(x), lwd=2.5, pch=15, cex = 0.4, col="darkred",
+     main="Tires Lifetime", cex.main=0.9,
+     xlab=TeX(r'($10^4$ kilometers)'), ylab="pdf(x)", cex.lab=1)
+
+plot(x =x, y = p.tires(x), lwd=2.5, pch=15, cex = 0.4, col="darkblue",
+     main="Tires Lifetime", cex.main=0.9,
+     xlab=TeX(r'($10^4$ kilometers)'), ylab="cdf(X)", cex.lab=1)
+```
+6.2. Determine the probability that tires will last less than 15000 km.
+
+```{r}
+# We need to convert to the appropriate scale and use CDF, therefore:
+message("P(t<(15000 km)) = ", round(p.tires(15000/10000),4))
+
+```
+
+6.3. Sample 3000 random variables from the distribution and determine the mean value
+and the variance, using the expression $Var(X) = E[X^2] − E[X]^2$.
+
+```{r}
+# We sample in the interval 5000km - 25000km
+samples <- r.tires(3000, p.tires,5000/10000,25000/10000)
+
+```
+
+```{r}
+# Plot to see the distribution of the sampling compared to the PDF
+# In order to plot with ggplot we need to create a dataframe with the data
+pdf <- d.tires(x)
+samples.df <- data.frame(lifetime = samples)
+pdf.df <- data.frame(x, pdf)
+
+# Plot
+r_hist <- ggplot() +
+  geom_histogram(data = samples.df, aes(x=lifetime, y=..density..), color="darkblue", fill="lightblue", size = 0.5) +
+  geom_line(data =pdf.df, aes(x=x, y=pdf, color = "PDF"), linetype =2 , size = 0.8) +
+  labs(title = "Lifetime of tires", subtitle = "Random sampling of 3000 values") +
+  scale_x_continuous(name= "Lifetime [km]", breaks = seq(0, 2.5, 0.5), labels = function(x){x*(10**4)}) +
+  scale_y_continuous(breaks=seq(0, 1.5, 0.3)) +
+  guides(color=guide_legend(NULL, order = 5))
+
+r_hist
+```
+
+```{r}
+# Using the mean R function
+av.lifetime <- mean(samples)
+var.lifetime <- (mean(samples**2) - av.lifetime**2)
+
+message('Expected value: ', round(av.lifetime*10**4), 'km\n',
+        'Variance: ', round(var.lifetime*10**4), 'km')
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
