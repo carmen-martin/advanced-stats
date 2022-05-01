@@ -1,0 +1,567 @@
+---
+title: "Laboratory 03"
+output: html_notebook
+---
+
+Carmen Martín Turrero
+
+------------------------------------------------------------------------
+
+Date : 14/04/2022
+
+------------------------------------------------------------------------
+
+```{r}
+library(ggplot2)
+library(GoFKernel)
+library(latex2exp)
+library(ggpubr)
+```
+
+------------------------------------------------------------------------
+
+## Exercise 1
+
+The triangular distribution, in the interval (a, b), is given by the following:
+
+```{=tex}
+\begin{equation}
+f(x)=
+\begin{cases}
+\frac{2(x-a)}{(b-a)(c-a)} & a\leqslant x < c\\
+\frac{2(b-x)}{(b-a)(b-c)} & c\leqslant x \leqslant b\\
+0 & \text{otherwise}
+\end{cases}
+\end{equation}
+```
+where $c ∈ [a, b]$.
+
+1.a. Plot the function, given the interval (a, b).
+
+```{r}
+
+a<- 1
+b <- 3
+c <- 2.5
+
+d.triangular <- function(x) {
+  if (a<=x & x<c) {
+    d <- 2*(x-a)/((b-a)*(c-a))
+  } else if (c<= x & x <= b) {
+    d<- 2*(b-x)/((b-a)*(b-c))
+  } else {
+    d <- 0
+  } 
+  return (d)
+}
+
+d.triangular <- Vectorize(d.triangular)
+
+```
+
+```{r}
+
+X <- seq(0, 4, 4/100)
+tri <- d.triangular(X)
+plot_df <- data.frame(X, tri)
+
+ggplot() +
+  geom_line(data = plot_df, aes(x=X, y=tri), linetype =2 , size = 0.8) +
+  labs(title = "Triangular distribution", subtitle = paste("a =", a, ", b = ", b, ", c =", c), x = "x", y = "pdf")+
+  guides(color=guide_legend(NULL, order = 5))
+
+```
+
+1.b. Write an algorithm to generate random numbers from the triangular distribution.
+
+```{r}
+
+r.triangular <- function(N, a, b, c){
+  x <- seq(a,b, (b-a)/2000)
+  d.triangular <- function(x) {
+    ifelse((x>a & x<c), (2*(x-a))/((b-a)*(c-a)),
+           ifelse((x>=c & x<b), (2*(b-x))/((b-a)*(b-c)),0))
+  }
+  
+  p.triangular <- function(x) {
+    ifelse((x>a & x<b), integrate(d.triangular,a,x)$value,
+           ifelse(x <= a, 0, 1))
+  }
+  
+  sampl <- runif(N)
+  rf <- Vectorize(inverse(p.triangular, a, b))
+  return (rf(sampl))
+}
+
+
+
+```
+
+
+1.c. Generate $10^4$ random numbers from the distribution, show them in an histogram and superimpose the analytical curve.
+
+```{r}
+
+samples <- r.triangular(10000, a,b,c)
+
+
+```
+
+```{r}
+samples.df <- data.frame(samples)
+
+ggplot() +
+  geom_histogram(data = samples.df, aes(x=samples, y=..density..), color="darkblue", fill="lightblue", size = 0.5) +
+  geom_line(data = plot_df, aes(x=X, y=tri, color = "PDF"), linetype =2 , size = 0.8) +
+  labs(title = "Triangular distribution", subtitle = paste("a =", a, ", b = ", b, ", c =", c), x = "x", y = "pdf")+
+  guides(color=guide_legend(NULL, order = 5))
+
+```
+
+------------------------------------------------------------------------
+
+## Exercise 2 - Markov's inequality
+
+Markov's inequality represents an upper bound to probability distributions:
+
+```{=tex}
+\begin{equation}
+P(X\geqslant k)\leqslant \frac{E[X]}{k}, for k>0.
+\end{equation}
+```
+Having defined a function $G(k) = 1 - F(k) \equiv P(X\geqslant k)$ plot G(k) and the Markov's upper bound for
+
+2.a. The exponential, Exp(λ = 1), distribution function.
+
+```{r}
+
+# Function G(k)
+G.exp  <- Vectorize(function(k){1- pexp(k, 1)})
+
+#Expected value of exponential with lambda = 1
+E.exp <- 1
+
+# Function for upper bound
+up.bound <- Vectorize(function(e, k){e/k})
+
+# Choose different k values and plot
+k <- seq(0.5, 11.5, 0.5)
+exp.df <- data.frame(k = k, E = up.bound(E.exp,k), G = G.exp(k))
+
+ggplot() +
+  geom_line(data = exp.df, aes(x = k, y = E, color = "Upper bound"), linetype = 2) +
+  geom_line(data = exp.df, aes(x = k, y = G, color = "G(k)")) +
+  ggtitle ("Exponential distribution, exp(1)") +
+  xlab("x") + ylab(NULL) +
+  guides(color=guide_legend(NULL, order = 5)) + 
+  scale_colour_brewer(palette = "Dark2")
+```
+
+2.b. The uniform, U(3, 5), distribution function
+
+```{r}
+
+# Function G(k)
+G.unif  <- Vectorize(function(k){1- punif(k, 3, 5)})
+
+#Expected value of exponential with lambda = 1
+E.unif <- 4
+
+# Choose different k values and plot
+k <- seq(0.5, 11.5, 0.5)
+unif.df <- data.frame(k = k, E = up.bound(E.unif,k), G = G.unif(k))
+
+ggplot() +
+  geom_line(data = unif.df, aes(x = k, y = E, color = "Upper bound"), linetype = 2) +
+  geom_line(data = unif.df, aes(x = k, y = G, color = "G(k)")) +
+  ggtitle ("Uniform distribution, U(3, 5)") +
+  xlab("x") + ylab(NULL) +
+  guides(color=guide_legend(NULL, order = 5)) + 
+  scale_colour_brewer(palette = "Dark2")
+
+```
+
+2.c. The binomial, Bin(n = 1, p = 1/2), distribution function
+
+```{r}
+
+# Function G(k)
+G.binom  <- Vectorize(function(k){1- pbinom(k, 1, 0.5)})
+
+#Expected value of exponential with lambda = 1
+E.binom <- 0.5
+
+# Choose different k values and plot
+k <- seq(0.1, 11.5, 0.1)
+binom.df <- data.frame(k = k, E = up.bound(E.binom,k), G = G.binom(k))
+
+ggplot() +
+  geom_line(data = binom.df, aes(x = k, y = E, color = "Upper bound"), linetype = 2) +
+  geom_line(data = binom.df, aes(x = k, y = G, color = "G(k)")) +
+  ggtitle ("Binomial distribution, bin(n = 1, p = 0.5)") +
+  xlab("x") + ylab(NULL) +
+  guides(color=guide_legend(NULL, order = 5)) + 
+  scale_colour_brewer(palette = "Dark2") +
+  coord_cartesian(ylim=c(0, 5))
+
+
+```
+
+2.d. a Poisson, Pois(λ = 1/2), distribution function
+
+```{r}
+
+# Function G(k)
+G.pois  <- Vectorize(function(k){1- ppois(k, 0.5)})
+
+#Expected value of exponential with lambda = 1
+E.pois <- 0.5
+
+# Choose different k values and plot
+k <- seq(0.5, 11.5, 0.5)
+pois.df <- data.frame(k = k, E = up.bound(E.pois,k), G = G.pois(k))
+
+ggplot() +
+  geom_line(data = pois.df, aes(x = k, y = E, color = "Upper bound"), linetype = 2) +
+  geom_line(data = pois.df, aes(x = k, y = G, color = "G(k)")) +
+  ggtitle ("Poisson Distribution") +
+  xlab("x") + ylab(NULL) +
+  guides(color=guide_legend(NULL, order = 5)) + 
+  scale_colour_brewer(palette = "Dark2")
+
+```
+
+------------------------------------------------------------------------
+
+## Exercise 3 - Chebyshev's inequality
+
+Chebyshev's inequality tells us that
+
+```{=tex}
+\begin{equation}
+P(|X-\mu|\geqslant k\sigma)\leqslant \frac{1}{k^2}
+\end{equation}
+```
+which can also be written as
+
+```{=tex}
+\begin{equation}
+P(|X-\mu|< k\sigma)\geqslant 1-\frac{1}{k^2}
+\end{equation}
+```
+use R to show, with a plot, that Chebyshev's inequality is an upper bound to the following distributions:
+
+3.a. A normal distribution, $N(µ = 3, σ = 5).$
+
+```{r}
+
+# Define Chebyshevs lower bound
+low.bound <- Vectorize(function(k){1 - 1/(k*k)})
+
+# Define mean and variance for normal distribution
+mu <- 3         
+sigma <- 5
+
+P.norm <- Vectorize(function(k){pnorm(k*sigma + mu, mu, sigma) - pnorm(mu-k*sigma, mu, sigma)})
+
+# Choose different k values and plot
+k <- seq(0.5, 11.5, 0.5)
+norm.df <- data.frame(k = k, low = low.bound(k), P = P.norm(k))
+
+ggplot() +
+  geom_line(data = norm.df, aes(x = k, y = low, color = "Lower bound"), linetype = 2) +
+  geom_line(data = norm.df, aes(x = k, y = P, color = "P(k)")) +
+  ggtitle ("Normal Distribution, N(3, 5)") +
+  xlab("x") + ylab(NULL) +
+  guides(color=guide_legend(NULL, order = 5)) + 
+  scale_colour_brewer(palette = "Set1")
+
+```
+
+3.b. An exponential distribution, $Exp(λ = 1).$
+
+```{r}
+
+# Define the probability
+P.exp <- Vectorize(function(k){pexp(1 + k, 1) - pnorm(1-k, 1)})
+
+# Choose different k values and plot
+k <- seq(0.5, 11.5, 0.5)
+exp.df <- data.frame(k = k, low = low.bound(k), P = P.exp(k))
+
+ggplot() +
+  geom_line(data = exp.df, aes(x = k, y = low, color = "Lower bound"), linetype = 2) +
+  geom_line(data = exp.df, aes(x = k, y = P, color = "P(k)")) +
+  ggtitle ("Exponential Distribution") +
+  xlab("x") + ylab(NULL) +
+  guides(color=guide_legend(NULL, order = 5)) + 
+  scale_colour_brewer(palette = "Set1")
+
+```
+
+3.c. A uniform distribution $U(1 − √2, 1 + √2).$
+
+```{r}
+
+# Define the probability
+E.unif <- 1        
+s.unif <- sqrt(2/3)
+
+P.unif <- Vectorize(function(k){punif(E.unif + k*s.unif, 1-sqrt(2), 1+sqrt(2)) - 
+    punif(E.unif - k*s.unif, 1-sqrt(2), 1+sqrt(2))})
+
+# Choose different k values and plot
+k <- seq(0.5, 11.5, 0.5)
+unif.df <- data.frame(k = k, low = low.bound(k), P = P.unif(k))
+
+ggplot() +
+  geom_line(data = unif.df, aes(x = k, y = low, color = "Lower bound"), linetype = 2) +
+  geom_line(data = unif.df, aes(x = k, y = P, color = "P(k)")) +
+  ggtitle ("Exponential Distribution") +
+  xlab("x") + ylab(NULL) +
+  guides(color=guide_legend(NULL, order = 5)) + 
+  scale_colour_brewer(palette = "Set1")
+
+```
+
+3.d. A Poisson, $Pois(λ = 1/3)$, distribution function.
+
+```{r}
+
+# Define the probability
+l = 1/3
+P.pois <- Vectorize(function(k){ppois(l + k*sqrt(l), l) - ppois(l - k*sqrt(l), l)})
+
+# Choose different k values and plot
+k <- seq(0.5, 11.5, 0.5)
+pois.df <- data.frame(k = k, low = low.bound(k), P = P.pois(k))
+
+ggplot() +
+  geom_line(data = pois.df, aes(x = k, y = low, color = "Lower bound"), linetype = 2) +
+  geom_line(data = pois.df, aes(x = k, y = P, color = "P(k)")) +
+  ggtitle ("Exponential Distribution") +
+  xlab("x") + ylab(NULL) +
+  guides(color=guide_legend(NULL, order = 5)) + 
+  scale_colour_brewer(palette = "Set1")
+
+
+```
+
+------------------------------------------------------------------------
+
+## Exercise 4 - Six Boxes Toy Model: inference
+
+Write a program that:
+
+1.  Allows the user to insert the color of a randomly extracted box
+2.  prints on the standard output the probability of selecting each box
+3.  Plots the probability for each box as a function of the extraction step
+
+```{r}
+#Remember: H_0 = all black, H_5 = all white
+
+# Before any extraction the probability of having selected each box is
+prob_labels <- c('p_H0', 'p_H1', 'p_H2', 'p_H3', 'p_H4', 'p_H5')
+probs_0 <- c(1/6, 1/6, 1/6, 1/6, 1/6, 1/6)
+
+# The probability of extracting a black stone given the box is
+pblack_bybox <- c(1, 4/5, 3/5, 2/5, 1/5, 0)
+
+# The probability of extracting a black or white stone at the beginning is 1/2,
+# since there is the same number of black and white stones.
+p_E <- 0.5
+
+# Having this data, we define a function that estimates the probability of
+# having selected each box
+
+estimation <- function(extraction, previous_estimate){
+    estimate <- previous_estimate
+    # black extraction
+    if (extraction == 0) {
+        #redefine the probability of extracting a black stone
+        p_E <- sum(pblack_bybox * previous_estimate)
+        estimate <- (previous_estimate*pblack_bybox)/p_E
+    }
+    #white extraction
+    if (extraction == 1) {
+        #redefine the probability of extracting a black stone
+        p_E <- sum((1-pblack_bybox) * previous_estimate)
+        estimate <- (previous_estimate*(1-pblack_bybox))/p_E
+    }
+    return (estimate)
+}
+```
+
+```{r}
+
+# function that plots probabilities for each extraction
+
+probs.plot <- function(trials, data0, data1, data2, data3, data4, data5){
+  probs.df <- data.frame(trials = trials, H0 = data0, H1 = data1, H2 = data2, H3 = data3, H4 = data4, H5 = data5)
+
+  H0 <- ggplot() +
+    geom_point(data = probs.df, aes(x = trials, y = H0), col = 'brown1')+
+    ggtitle ("Box H0") + coord_cartesian(ylim = c(0,1)) +
+    xlab("Trial") + ylab("Probability") +
+    scale_colour_brewer(palette = "Set2")
+
+  H1 <- ggplot() +
+    geom_point(data = probs.df, aes(x = trials, y = H1), col = 'brown1')+
+    ggtitle ("Box H1") + coord_cartesian(ylim = c(0,1)) +
+    xlab("Trial") + ylab("Probability") +
+    scale_colour_brewer(palette = "Set2")
+  
+  H2 <- ggplot() +
+    geom_point(data = probs.df, aes(x = trials, y = H2), col = 'brown1')+
+    ggtitle ("Box H2") + coord_cartesian(ylim = c(0,1)) +
+    xlab("Trial") + ylab("Probability") +
+    scale_colour_brewer(palette = "Set2")
+  
+  H3 <- ggplot() +
+    geom_point(data = probs.df, aes(x = trials, y = H3), col = 'brown1')+
+    ggtitle ("Box H3") + coord_cartesian(ylim = c(0,1)) +
+    xlab("Trial") + ylab("Probability") +
+    scale_colour_brewer(palette = "Set2")
+  
+  H4 <- ggplot() +
+    geom_point(data = probs.df, aes(x = trials, y = H4), col = 'brown1')+
+    ggtitle ("Box H4") + coord_cartesian(ylim = c(0,1)) +
+    xlab("Trial") + ylab("Probability") +
+    scale_colour_brewer(palette = "Set2")
+  
+  H5 <- ggplot() +
+    geom_point(data = probs.df, aes(x = trials, y = H5), col = 'brown1')+
+    ggtitle ("Box H5") + coord_cartesian(ylim = c(0,1)) +
+    xlab("Trial") + ylab("Probability") +
+    scale_colour_brewer(palette = "Set2")
+  
+  ggarrange(H0, H1, H2, H3, H4, H5,
+            ncol = 3, nrow = 2)
+}
+
+```
+
+```{r}
+#Set the initial conditions
+extraction  <- 0 
+counter <- 0
+previous <- probs_0
+data0 <- probs_0[1]
+data1 <- probs_0[2]
+data2 <- probs_0[3]
+data3 <- probs_0[4]
+data4 <- probs_0[5]
+data5 <- probs_0[6]
+trials <- 0
+
+while(extraction != 2){
+  # Ask the user to insert the color of the extracted stone  
+  extraction <- as.integer(readline(prompt="Which stone did you extract? (black = 0, white = 1, exit = 2) \n"))
+  
+  # Estimate the probabilities of having selected each box
+  probs <- estimation(extraction, previous)
+  counter <- counter + 1
+  
+  # Save the data for plotting
+  data0 <- append(data0, probs[1])
+  data1 <- append(data1, probs[2])
+  data2 <- append(data2, probs[3])
+  data3 <- append(data3, probs[4])
+  data4 <- append(data4, probs[5])
+  data5 <- append(data5, probs[6])
+  trials <- append(trials, counter)
+  
+  # Print the actual probabilities
+  cat('Trial ', counter,': P(H0) = ', round(probs[1], 8), ', P(H1) = ', round(probs[2], 8), ', P(H2) = ', round(probs[3],8), ', P(H3) = ', round(probs[4], 8), ', P(H4) = ', round(probs[5], 8), ', P(H5) = ', round(probs[6],8))
+  
+  # If we want to plot at each iteration use:
+  # probs.plot(trials, data0, data1, data2, data3, data4, data5)
+  
+  # Assign the new values to use in the next iterations as previous ones
+  previous <- probs
+}    
+
+if ( extraction == 2) {
+  print('End of experiment')
+}
+
+```
+
+```{r}
+
+# Print final result (last trial)
+probs.plot(trials, data0, data1, data2, data3, data4, data5)
+
+```
+
+
+------------------------------------------------------------------------
+
+## Exercise 5 - Six Boxes Toy Model: simulation
+
+Consider again the six boxes toy model of the previous exercise and write a simulation program that: 1) selects a random box 2) makes random sampling from the box 3) prints on the standard output the probability of selecting each box 4) plots the probability for each box as a function of the number of trial
+
+```{r}
+
+# The initial conditions are the same as in the previous exercise
+# We will also use the functions defined in that exercise
+
+box_labels <- c('H0', 'H1', 'H2', 'H3', 'H4', 'H5')
+probs_0 <- c(1/6, 1/6, 1/6, 1/6, 1/6, 1/6)
+pblack_bybox <- c(1, 4/5, 3/5, 2/5, 1/5, 0)
+p_E_0 <- 0.5
+
+# We select a box at random:
+box.index <- sample(1:6, 1)
+
+message("Selected box is: ", box_labels[box.index])
+
+```
+
+```{r}
+#Make a random sampling from the box:
+
+samples <- rbinom(100, 1, 1-pblack_bybox[box.index])
+```
+
+
+```{r}
+# Study the probability of having selected each box based on the sampling
+counter <- 0
+previous <- probs_0
+data0 <- probs_0[1]
+data1 <- probs_0[2]
+data2 <- probs_0[3]
+data3 <- probs_0[4]
+data4 <- probs_0[5]
+data5 <- probs_0[6]
+trials <- 0
+
+for (extraction in samples){
+  
+  # Estimate the probabilities of having selected each box
+  probs <- estimation(extraction, previous)
+  counter <- counter + 1
+  
+  # Save the data for plotting
+  data0 <- append(data0, probs[1])
+  data1 <- append(data1, probs[2])
+  data2 <- append(data2, probs[3])
+  data3 <- append(data3, probs[4])
+  data4 <- append(data4, probs[5])
+  data5 <- append(data5, probs[6])
+  trials <- append(trials, counter)
+  
+  # Assign the new values to use in the next iterations as previous ones
+  previous <- probs
+}
+```
+
+
+```{r}
+# Print the final values and plot the estimation over time
+cat('P(H0) = ', round(probs[1], 8), ', P(H1) = ', round(probs[2], 8), ', P(H2) = ', round(probs[3],8), ', P(H3) = ', round(probs[4], 8), ', P(H4) = ', round(probs[5], 8), ', P(H5) = ', round(probs[6],8))
+
+probs.plot(trials, data0, data1, data2, data3, data4, data5)
+
+```
