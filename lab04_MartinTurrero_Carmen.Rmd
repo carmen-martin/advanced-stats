@@ -1,0 +1,138 @@
+---
+title: "Laboratory 04"
+output: html_notebook
+---
+
+Carmen Martín Turrero
+
+---
+
+Date : 04/05/2022
+
+---
+
+```{r}
+library(ggplot2)
+library(GoFKernel)
+library(latex2exp)
+```
+
+
+---
+
+Exercise 1 - Community Mobility Open Data
+---
+
+• Community Mobility Reports have been created with the aim to provide insights into what has changed in response to policies aimed at combating COVID-19. Data can be found at https://www.google.com/covid19/mobility/
+
+• Download and analyze the following data sets:
+
+- https://www.gstatic.com/covid19/mobility/Global_Mobility_Report.csv
+
+- https://www.gstatic.com/covid19/mobility/Region_Mobility_Report_CSVs.zip
+
+The data show how visitors to (or time spent in) categorized places change compared to baseline days. A baseline day represents a normal value for that day of the week. The baseline day is the median value from the 5-week period Jan 3 – Feb 6, 2020. To make the reports useful, categories have been used to group some of the places with similar characteristics for purposes of social distancing guidance. The following categories are available:
+
+- retail and recreation, i.e. places like restaurants,cafes, shopping centers, theme parks,museums, libraries, and movie theaters
+- grocery and pharmacy, i.e. grocery markets, food warehouses, farmers markets, specialty food shops, drug stores, and pharmacies
+- parks, i.e. national parks, public beaches, marinas, dog parks, plazas,and public gardens
+- transit stations i.e. all public transport hubs such as subway, bus, and train stations
+- workplaces, i.e. places of work
+- residential, i.e. people’s residence
+
+• Select a couple of European countries of your choice and analyze the trends in the previous
+variables over time:
+
+- produce a plot of the data by averaging the observable over a period of one week (hint: convert the data field to lubridate::week) and one month and quantify the impact of COVID19 restrictions on mobility sitations.
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+---
+
+Exercise 2 - Random number generators
+---
+
+• one of the first random number generator was proposed by von Neumann, the so-called middle square algorithm
+
+• write R code to implement this type of generator and, given a fixed digit number input, square it an remove the leading and trailing digits, in order to return a number with the same number of digits as the original number
+
+• Suggestion : after having squared the number, convert it to a list of characters (number <- unlist(strsplit(as.character(x.squared),""))) and, after having removed the head and tail of the list, convert it back to a number (as.numeric(paste(number.after.trimming, collapse="")))
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+---
+
+Exercise 3 - Bayesian Inference
+---
+
+• A publishing company has recently launched a new journal. In order to determine how effective it is in reaching its possible audience, a market survey company selects a random sample of people from a possible target audience and interviews them. Out of 150 interviewed people, 29 have read the last issue of the journal.
+
+a) What kind of distribution would you assume for y, the number of people that have seen the last issue of the journal ?
+
+b) Assuming a uniform prior, what is the posterior distribution for y ?
+
+c) Plot both posterior and likelihood ditributions functions
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+---
+
+Exercise 4 - Bayesian Inference
+---
+
+• A coin is flipped n = 30 times with the following outcomes:
+
+T, T, T, T, T, H, T, T, H, H, T, T, H, H, H, T, H, T, H, T, H, H, T, H, T, H, T, H, H, H
+
+a) Assuming a flat prior, and a beta prior, plot the likelihood, prior and posterior distributions for the data set.
+
+```{r}
+
+```
+
+
+b) Evaluate the most probable value for the coin probability p and, integrating the posterior probability distribution, give an estimate for a 95% credibility interval.
+
+```{r}
+
+```
+
+c) Repeat the same analysis assuming a sequential analysis of the data. Show how the most probable value and the credibility interval change as a function of the number of coin tosses (i.e. from 1 to 30).
+
+```{r}
+
+```
+
+d) Do you get a different result, by analyzing the data sequentially with respect to a one-step analysis (i.e. considering all the data as a whole) ?
+
