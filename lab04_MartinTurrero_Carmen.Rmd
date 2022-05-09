@@ -5,134 +5,461 @@ output: html_notebook
 
 Carmen Martín Turrero
 
----
+------------------------------------------------------------------------
 
 Date : 04/05/2022
 
----
+------------------------------------------------------------------------
 
 ```{r}
+library(lubridate)
 library(ggplot2)
 library(GoFKernel)
 library(latex2exp)
+library(dplyr)
 ```
 
+------------------------------------------------------------------------
 
----
+## Exercise 1 - Community Mobility Open Data
 
-Exercise 1 - Community Mobility Open Data
----
-
-• Community Mobility Reports have been created with the aim to provide insights into what has changed in response to policies aimed at combating COVID-19. Data can be found at https://www.google.com/covid19/mobility/
+• Community Mobility Reports have been created with the aim to provide insights into what has changed in response to policies aimed at combating COVID-19. Data can be found at <https://www.google.com/covid19/mobility/>
 
 • Download and analyze the following data sets:
 
-- https://www.gstatic.com/covid19/mobility/Global_Mobility_Report.csv
+-   <https://www.gstatic.com/covid19/mobility/Global_Mobility_Report.csv>
 
-- https://www.gstatic.com/covid19/mobility/Region_Mobility_Report_CSVs.zip
+-   <https://www.gstatic.com/covid19/mobility/Region_Mobility_Report_CSVs.zip>
 
-The data show how visitors to (or time spent in) categorized places change compared to baseline days. A baseline day represents a normal value for that day of the week. The baseline day is the median value from the 5-week period Jan 3 – Feb 6, 2020. To make the reports useful, categories have been used to group some of the places with similar characteristics for purposes of social distancing guidance. The following categories are available:
+The data show how visitors to (or time spent in) categorized places change compared to baseline days. A baseline day represents a normal value for that day of the week. The baseline day is the median value from the 5-week period Jan 3 -- Feb 6, 2020. To make the reports useful, categories have been used to group some of the places with similar characteristics for purposes of social distancing guidance. The following categories are available:
 
-- retail and recreation, i.e. places like restaurants,cafes, shopping centers, theme parks,museums, libraries, and movie theaters
-- grocery and pharmacy, i.e. grocery markets, food warehouses, farmers markets, specialty food shops, drug stores, and pharmacies
-- parks, i.e. national parks, public beaches, marinas, dog parks, plazas,and public gardens
-- transit stations i.e. all public transport hubs such as subway, bus, and train stations
-- workplaces, i.e. places of work
-- residential, i.e. people’s residence
+-   retail and recreation, i.e. places like restaurants,cafes, shopping centers, theme parks,museums, libraries, and movie theaters
+-   grocery and pharmacy, i.e. grocery markets, food warehouses, farmers markets, specialty food shops, drug stores, and pharmacies
+-   parks, i.e. national parks, public beaches, marinas, dog parks, plazas,and public gardens
+-   transit stations i.e. all public transport hubs such as subway, bus, and train stations
+-   workplaces, i.e. places of work
+-   residential, i.e. people's residence
 
-• Select a couple of European countries of your choice and analyze the trends in the previous
-variables over time:
+• Select a couple of European countries of your choice and analyze the trends in the previous variables over time:
 
-- produce a plot of the data by averaging the observable over a period of one week (hint: convert the data field to lubridate::week) and one month and quantify the impact of COVID19 restrictions on mobility sitations.
-
-```{r}
-```
-
+-   produce a plot of the data by averaging the observable over a period of one week (hint: convert the data field to lubridate::week) and one month and quantify the impact of COVID19 restrictions on mobility sitations.
 
 ```{r}
-```
+# Load the datasets
+# Global
+global.mobchange <- read.csv("/Users/cmart/Documents/Universidad/Master/Second Semester/Advanced Statistics/Labs/DATA/Global_Mobility_Report.csv", header = TRUE, sep = ',')
 
+# Italy
+IT20.mobchange <- read.csv("/Users/cmart/Documents/Universidad/Master/Second Semester/Advanced Statistics/Labs/DATA/2020_IT_Region_Mobility_Report.csv", header = TRUE, sep = ',')
+
+IT21.mobchange <- read.csv("/Users/cmart/Documents/Universidad/Master/Second Semester/Advanced Statistics/Labs/DATA/2021_IT_Region_Mobility_Report.csv", header = TRUE, sep = ',')
+
+IT22.mobchange <- read.csv("/Users/cmart/Documents/Universidad/Master/Second Semester/Advanced Statistics/Labs/DATA/2022_IT_Region_Mobility_Report.csv", header = TRUE, sep = ',')
+
+# Spain
+ES20.mobchange <- read.csv("/Users/cmart/Documents/Universidad/Master/Second Semester/Advanced Statistics/Labs/DATA/2020_ES_Region_Mobility_Report.csv", header = TRUE, sep = ',')
+
+ES21.mobchange <- read.csv("/Users/cmart/Documents/Universidad/Master/Second Semester/Advanced Statistics/Labs/DATA/2021_ES_Region_Mobility_Report.csv", header = TRUE, sep = ',')
+
+ES22.mobchange <- read.csv("/Users/cmart/Documents/Universidad/Master/Second Semester/Advanced Statistics/Labs/DATA/2022_ES_Region_Mobility_Report.csv", header = TRUE, sep = ',')
+
+# Germany
+
+DE20.mobchange <- read.csv("/Users/cmart/Documents/Universidad/Master/Second Semester/Advanced Statistics/Labs/DATA/2020_DE_Region_Mobility_Report.csv", header = TRUE, sep = ',')
+
+DE21.mobchange <- read.csv("/Users/cmart/Documents/Universidad/Master/Second Semester/Advanced Statistics/Labs/DATA/2021_DE_Region_Mobility_Report.csv", header = TRUE, sep = ',')
+
+DE22.mobchange <- read.csv("/Users/cmart/Documents/Universidad/Master/Second Semester/Advanced Statistics/Labs/DATA/2022_DE_Region_Mobility_Report.csv", header = TRUE, sep = ',')
+
+# Finland
+FI20.mobchange <- read.csv("/Users/cmart/Documents/Universidad/Master/Second Semester/Advanced Statistics/Labs/DATA/2020_FI_Region_Mobility_Report.csv", header = TRUE, sep = ',')
+
+FI21.mobchange <- read.csv("/Users/cmart/Documents/Universidad/Master/Second Semester/Advanced Statistics/Labs/DATA/2021_FI_Region_Mobility_Report.csv", header = TRUE, sep = ',')
+
+FI22.mobchange <- read.csv("/Users/cmart/Documents/Universidad/Master/Second Semester/Advanced Statistics/Labs/DATA/2022_FI_Region_Mobility_Report.csv", header = TRUE, sep = ',')
+```
 
 ```{r}
+# See what the dataframe looks like
+global.mobchange
 ```
-
 
 ```{r}
+message("Taking a look at the dataset we see that the columns that interest us are: 'country_region', 'retail_and_recreation_percent_change_from_baseline', 'grocery_and_pharmacy_percent_change_from_baseline', 'parks_percent_change_from_baseline', 'transit_stations_percent_change_from_baseline', 'workplaces_percent_change_from_baseline' and 'residential_percent_change_from_baseline'.")
 ```
 
----
+```{r}
+# Establish the date format
+global.mobchange$date <- as.Date(global.mobchange$date, format = "%Y-%m-%d")
+IT20.mobchange$date <- as.Date(IT20.mobchange$date, format = "%Y-%m-%d")
+ES20.mobchange$date <- as.Date(ES20.mobchange$date, format = "%Y-%m-%d")
+DE20.mobchange$date <- as.Date(DE20.mobchange$date, format = "%Y-%m-%d")
+FI20.mobchange$date <- as.Date(FI20.mobchange$date, format = "%Y-%m-%d")
+IT21.mobchange$date <- as.Date(IT21.mobchange$date, format = "%Y-%m-%d")
+ES21.mobchange$date <- as.Date(ES21.mobchange$date, format = "%Y-%m-%d")
+DE21.mobchange$date <- as.Date(DE21.mobchange$date, format = "%Y-%m-%d")
+FI21.mobchange$date <- as.Date(FI21.mobchange$date, format = "%Y-%m-%d")
+IT22.mobchange$date <- as.Date(IT22.mobchange$date, format = "%Y-%m-%d")
+ES22.mobchange$date <- as.Date(ES22.mobchange$date, format = "%Y-%m-%d")
+DE22.mobchange$date <- as.Date(DE22.mobchange$date, format = "%Y-%m-%d")
+FI22.mobchange$date <- as.Date(FI22.mobchange$date, format = "%Y-%m-%d")
+```
 
-Exercise 2 - Random number generators
----
+```{r}
+#round dates down to week
+IT20.mobchange$week <- floor_date(IT20.mobchange$date, "week")
+ES20.mobchange$week <- floor_date(ES20.mobchange$date, "week")
+DE20.mobchange$week <- floor_date(DE20.mobchange$date, "week")
+FI20.mobchange$week <- floor_date(FI20.mobchange$date, "week")
+IT21.mobchange$week <- floor_date(IT21.mobchange$date, "week")
+ES21.mobchange$week <- floor_date(ES21.mobchange$date, "week")
+DE21.mobchange$week <- floor_date(DE21.mobchange$date, "week")
+FI21.mobchange$week <- floor_date(FI21.mobchange$date, "week")
+IT22.mobchange$week <- floor_date(IT22.mobchange$date, "week")
+ES22.mobchange$week <- floor_date(ES22.mobchange$date, "week")
+DE22.mobchange$week <- floor_date(DE22.mobchange$date, "week")
+FI22.mobchange$week <- floor_date(FI22.mobchange$date, "week")
+```
+
+```{r}
+#find mean by week
+IT20.mobchange.week <- aggregate(IT20.mobchange[, 10:16], list(week(IT20.mobchange$date)), mean, na.rm=TRUE)
+ES20.mobchange.week <- aggregate(ES20.mobchange[, 10:16], list(week(ES20.mobchange$date)), mean, na.rm=TRUE)
+DE20.mobchange.week <- aggregate(DE20.mobchange[, 10:16], list(week(DE20.mobchange$date)), mean, na.rm=TRUE)
+FI20.mobchange.week <- aggregate(FI20.mobchange[, 10:16], list(week(FI20.mobchange$date)), mean, na.rm=TRUE)
+IT21.mobchange.week <- aggregate(IT21.mobchange[, 10:16], list(week(IT21.mobchange$date)), mean, na.rm=TRUE)
+ES21.mobchange.week <- aggregate(ES21.mobchange[, 10:16], list(week(ES21.mobchange$date)), mean, na.rm=TRUE)
+DE21.mobchange.week <- aggregate(DE21.mobchange[, 10:16], list(week(DE21.mobchange$date)), mean, na.rm=TRUE)
+FI21.mobchange.week <- aggregate(FI21.mobchange[, 10:16], list(week(FI21.mobchange$date)), mean, na.rm=TRUE)
+IT22.mobchange.week <- aggregate(IT22.mobchange[, 10:16], list(week(IT22.mobchange$date)), mean, na.rm=TRUE)
+ES22.mobchange.week <- aggregate(ES22.mobchange[, 10:16], list(week(ES22.mobchange$date)), mean, na.rm=TRUE)
+DE22.mobchange.week <- aggregate(DE22.mobchange[, 10:16], list(week(DE22.mobchange$date)), mean, na.rm=TRUE)
+FI22.mobchange.week <- aggregate(FI22.mobchange[, 10:16], list(week(FI22.mobchange$date)), mean, na.rm=TRUE)
+```
+
+```{r}
+# Concatenate the dataframes of the same country
+IT.mobchange <- rbind(IT20.mobchange.week, IT21.mobchange.week, IT22.mobchange.week)
+ES.mobchange <- rbind(ES20.mobchange.week, ES21.mobchange.week, ES22.mobchange.week)
+DE.mobchange <- rbind(DE20.mobchange.week, DE21.mobchange.week, DE22.mobchange.week)
+FI.mobchange <- rbind(FI20.mobchange.week, FI21.mobchange.week, FI22.mobchange.week)
+
+```
+
+```{r}
+# Plot the increment percentage for Italy
+options(scipen=999) 
+plt.italy <- ggplot() + 
+  geom_line(data = IT.mobchange, aes(x = week, y = retail_and_recreation_percent_change_from_baseline, col = "Retail and recreation")) +
+  geom_line(data = IT.mobchange, aes(x = week, y = grocery_and_pharmacy_percent_change_from_baseline, col = "Grocery and Pharmacy")) +
+  geom_line(data = IT.mobchange, aes(x = week, y = parks_percent_change_from_baseline, col = "Parks")) +
+  geom_line(data = IT.mobchange, aes(x = week, y = transit_stations_percent_change_from_baseline, col = "Transit Stations")) +
+  geom_line(data = IT.mobchange, aes(x = week, y = workplaces_percent_change_from_baseline, col = "Workplaces")) +
+  geom_line(data = IT.mobchange, aes(x = week, y = residential_percent_change_from_baseline, col = "Residential")) +
+  xlab('Date') + 
+  ylab('Increment w.r.t. baseline (%)') + 
+  ggtitle('Mobility variation due to COVID-19 in Italy') +
+  scale_colour_brewer(palette = "Set2") + 
+  scale_x_date(date_breaks = '3 months', date_labels = '%b %Y') +
+  #scale_y_continuous(labels = function(x){paste0((x/1000000), 'M')}) +
+  guides(color=guide_legend("Place", order = 5)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+plot(plt.italy)
+
+```
+
+```{r}
+# Plot the increment percentage for Spain
+options(scipen=999) 
+plt.spain <- ggplot() + 
+  geom_line(data = ES.mobchange, aes(x = week, y = retail_and_recreation_percent_change_from_baseline, col = "Retail and recreation")) +
+  geom_line(data = ES.mobchange, aes(x = week, y = grocery_and_pharmacy_percent_change_from_baseline, col = "Grocery and Pharmacy")) +
+  geom_line(data = ES.mobchange, aes(x = week, y = parks_percent_change_from_baseline, col = "Parks")) +
+  geom_line(data = ES.mobchange, aes(x = week, y = transit_stations_percent_change_from_baseline, col = "Transit Stations")) +
+  geom_line(data = ES.mobchange, aes(x = week, y = workplaces_percent_change_from_baseline, col = "Workplaces")) +
+  geom_line(data = ES.mobchange, aes(x = week, y = residential_percent_change_from_baseline, col = "Residential")) +
+  xlab('Date') + 
+  ylab('Increment w.r.t. baseline (%)') + 
+  ggtitle('Mobility variation due to COVID-19 in Spain') +
+  scale_colour_brewer(palette = "Dark2") + 
+  scale_x_date(date_breaks = '3 months', date_labels = '%b %Y') +
+  guides(color=guide_legend("Place", order = 5)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+plot(plt.spain)
+```
+
+```{r}
+# Compare people who stayed at home during the first months in different countries
+options(scipen=999) 
+plt.res.4m <- ggplot() + 
+  geom_line(data = ES.mobchange, aes(x = week, y = residential_percent_change_from_baseline, col = "Spain")) +
+  geom_line(data = IT.mobchange, aes(x = week, y = residential_percent_change_from_baseline, col = "Italy")) +
+  geom_line(data = DE.mobchange, aes(x = week, y = residential_percent_change_from_baseline, col = "Germany")) +
+  geom_line(data = FI.mobchange, aes(x = week, y = residential_percent_change_from_baseline, col = "Finland")) +
+  labs(title='Change in people staying at their residence', 
+       subtitle='First four months of the COVID-19 pandemic',
+       x = 'Date', y = 'Increment w.r.t. baseline (%)') +
+  scale_colour_brewer(palette = "Dark2") + 
+  scale_x_date(date_breaks = '1 week', date_labels = '%d %b', limits = as.Date(c('2020-03-01', '2020-07-01'))) +
+  guides(color=guide_legend("Country", order = 5)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+plot(plt.res.4m)
+```
+
+```{r}
+
+# Compare people who went to work during the first months in different countries
+options(scipen=999) 
+plt.wrk.1y <- ggplot() + 
+  geom_line(data = ES.mobchange, aes(x = week, y = workplaces_percent_change_from_baseline, col = "Spain")) +
+  geom_line(data = IT.mobchange, aes(x = week, y = workplaces_percent_change_from_baseline, col = "Italy")) +
+  geom_line(data = DE.mobchange, aes(x = week, y = workplaces_percent_change_from_baseline, col = "Germany")) +
+  geom_line(data = FI.mobchange, aes(x = week, y = workplaces_percent_change_from_baseline, col = "Finland")) +
+  labs(title='Change in mobility to the workplace due to COVID-19', 
+       subtitle='First year of the pandemic',
+       x = 'Date', y = 'Increment w.r.t. baseline (%)') +
+  scale_colour_brewer(palette = "Dark2") + 
+  scale_x_date(date_breaks = '1 month', date_labels = '%b %Y', limits = as.Date(c('2020-03-01', '2021-03-01'))) +
+  guides(color=guide_legend("Country", order = 5)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+plot(plt.wrk.1y)
+
+```
+
+```{r}
+# Compare people who went to work during the first months in different countries
+options(scipen=999) 
+plt.parks <- ggplot() + 
+  geom_line(data = ES.mobchange, aes(x = week, y = parks_percent_change_from_baseline, col = "Spain")) +
+  geom_line(data = IT.mobchange, aes(x = week, y = parks_percent_change_from_baseline, col = "Italy")) +
+  geom_line(data = DE.mobchange, aes(x = week, y = parks_percent_change_from_baseline, col = "Germany")) +
+  geom_line(data = FI.mobchange, aes(x = week, y = parks_percent_change_from_baseline, col = "Finland")) +
+  labs(title='Change in mobility to parks due to COVID-19', 
+       x = 'Date', y = 'Increment w.r.t. baseline (%)') +
+  scale_colour_brewer(palette = "Dark2") + 
+  scale_x_date(date_breaks = '3 months', date_labels = '%b %Y') +
+  guides(color=guide_legend("Country", order = 5)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+plot(plt.parks)
+```
+
+```{r}
+
+```
+
+------------------------------------------------------------------------
+
+## Exercise 2 - Random number generators
 
 • one of the first random number generator was proposed by von Neumann, the so-called middle square algorithm
 
 • write R code to implement this type of generator and, given a fixed digit number input, square it an remove the leading and trailing digits, in order to return a number with the same number of digits as the original number
 
-• Suggestion : after having squared the number, convert it to a list of characters (number <- unlist(strsplit(as.character(x.squared),""))) and, after having removed the head and tail of the list, convert it back to a number (as.numeric(paste(number.after.trimming, collapse="")))
+• Suggestion : after having squared the number, convert it to a list of characters (number \<- unlist(strsplit(as.character(x.squared),""))) and, after having removed the head and tail of the list, convert it back to a number (as.numeric(paste(number.after.trimming, collapse="")))
 
 ```{r}
+# Algorithm for generation of n pseudo-random numbers of 8 digits each
+middle.squares <- function(seed, n){
+  # Seed must have 8 digits
+  result <- c(seed)
+  l.seed <- 8
+  # Generate the n numbers
+  for (i in 1:n){
+    s.squared <- seed**2
+    number <- unlist(strsplit(as.character(s.squared),""))
+    l.squared <- length(number)
+    l.diff <- l.squared - l.seed
+    # Define the trimming edges
+    if (l.diff%%2 == 0){
+      left.trim <- l.diff/2
+      right.trim <- l.squared - l.diff/2 - 1
+    } else{
+      left.trim <- ceiling(l.diff/2)
+      right.trim <- l.squared - ceiling(l.diff/2)
+    }
+    new.rdn <- as.numeric(paste(number[left.trim:right.trim], collapse=""))
+    # Store each result
+    result <- append(result, new.rdn)
+    # Use the new random number as next seed
+    seed <- new.rdn
+  }
+  return(result)
+}
+```
+
+```{r}
+seed <- as.integer(readline(prompt="Insert seed (8 digits) \n"))
+generated.rdn <- middle.squares(seed, 10)
+```
+
+```{r}
+generated.rdn
+```
+
+```{r}
+
 ```
 
 
-```{r}
-```
 
+------------------------------------------------------------------------
 
-```{r}
-```
-
----
-
-Exercise 3 - Bayesian Inference
----
+## Exercise 3 - Bayesian Inference
 
 • A publishing company has recently launched a new journal. In order to determine how effective it is in reaching its possible audience, a market survey company selects a random sample of people from a possible target audience and interviews them. Out of 150 interviewed people, 29 have read the last issue of the journal.
 
-a) What kind of distribution would you assume for y, the number of people that have seen the last issue of the journal ?
+a)  What kind of distribution would you assume for y, the number of people that have seen the last issue of the journal ?\
+    \
+    We could assume that he probability of one person reading the journal is independent from other people having read it and that the probability for every other person to read the journal is the same. Therefore, we would use a binomial distribution. However, we should note that this assumptions might not be met in some cases. For example, if someone reads the journal and recommends it to others or if in their local shop the journal is sold or not.
 
-b) Assuming a uniform prior, what is the posterior distribution for y ?
+b)  Assuming a uniform prior, what is the posterior distribution for y ?\
+    \
+    If we assume a uniform prior probability, the posterior distribution will have the same shape as the likelihood probability. Therefore, we would have a binomial distribution.\
+    \
+    $$P(\theta | D, M) \propto P(D | \theta , M) · P(\theta | M)$$
 
-c) Plot both posterior and likelihood ditributions functions
+c)  Plot both posterior and likelihood ditribution functions
 
 ```{r}
+
+# Total people interviewed
+T.people <- 150
+# People that have read the journal
+R.people <- 29
+
+n.samples <- 1000
+delta.p <- 1/n.samples
+probabilities <- seq(0,1, delta.p)
+
+posterior <- dbinom(x = R.people, size = T.people, prob = probabilities)
+norm.factor <- delta.p*sum(posterior)
+posterior <- posterior/norm.factor
+
+probs  <- data.frame(probability = probabilities, 
+                  posterior = posterior, 
+                  likelihood = posterior)
+                 
+options(scipen=999)                
+ggplot() +
+  geom_line(data = probs, aes(x = probability, y = posterior, col = "Posterior"), size = 1) +
+  geom_line(data = probs, aes(x = probability, y = likelihood, col = "Likelihood"), linetype = 'dashed', size = 1)+
+  labs(title='Journal Statistics', 
+       x = 'Probability', y = 'PDF') +
+  scale_colour_brewer(palette = "Set2") + 
+  guides(color=guide_legend("Probability", order = 5))
+
+  
 ```
 
 
-```{r}
-```
 
 
-```{r}
-```
 
----
+------------------------------------------------------------------------
 
-Exercise 4 - Bayesian Inference
----
+## Exercise 4 - Bayesian Inference
 
 • A coin is flipped n = 30 times with the following outcomes:
 
 T, T, T, T, T, H, T, T, H, H, T, T, H, H, H, T, H, T, H, T, H, H, T, H, T, H, T, H, H, H
 
-a) Assuming a flat prior, and a beta prior, plot the likelihood, prior and posterior distributions for the data set.
+a)  Assuming a flat prior, and a beta prior, plot the likelihood, prior and posterior distributions for the data set.
 
 ```{r}
 
+alpha.prior <- 10; beta.prior <- 10
+Nsamp <- 200
+delta.p <- 1/Nsamp
+tails = 15
+tosses = 30
+p <- seq(from=1/(2*Nsamp), by=1/Nsamp, length.out=Nsamp)
+p.prior <- dbeta(x=p, alpha.prior, beta.prior)
+
+p.like <- dbinom(x=tails, size=tosses, prob=p)
+p.like <- p.like/(delta.p*sum(p.like))
+p.post <- dbeta(x=p, shape1=alpha.prior+tails, shape2=beta.prior+tosses-tails)
+
+df <- data.frame(probabilities = p, prior = p.prior, posterior = p.post, likelihood = p.like)
+
+options(scipen=999)                
+ggplot() +
+  geom_line(data = df, aes(x = probabilities, y = posterior, col = "Posterior"), size = 1) +
+  geom_line(data = df, aes(x = probabilities, y = prior, col = "Prior"), size = 1, linetype = 'dotted') +
+  geom_line(data = df, aes(x = probabilities, y = likelihood, col = "Likelihood"), linetype = 'dashed', size = 1)+
+  labs(title='Coin tossing', subtitle = '30 tossings, 15 of which Tails',
+       x = 'Probability', y = 'PDF') +
+  scale_colour_brewer(palette = "Set1") + 
+  guides(color=guide_legend("Probability", order = 5))
+
+
 ```
 
+b)  Evaluate the most probable value for the coin probability p and, integrating the posterior probability distribution, give an estimate for a 95% credibility interval.
 
-b) Evaluate the most probable value for the coin probability p and, integrating the posterior probability distribution, give an estimate for a 95% credibility interval.
+```{r}
+# Most probable value 
+max.value <- p[which.max(p.post)]
+
+# Credibility intervals
+x1 <- qbeta(0.05, alpha.prior+tails, beta.prior+tosses-tails)   
+x2 <- qbeta(0.95, alpha.prior+tails, beta.prior+tosses-tails)
+print(paste0('The most probable value is ', max.value, ' with a credibility interval of [', round(x1,2),', ', round(x2,2),']'))
+
+```
+
+c)  Repeat the same analysis assuming a sequential analysis of the data. Show how the most probable value and the credibility interval change as a function of the number of coin tosses (i.e. from 1 to 30).
 
 ```{r}
 
+tails <- 0
+p <- seq(from=1/(2*Nsamp), by=1/Nsamp, length.out=Nsamp)
+
+# Coin tossings (tails = 1, heads = 0)
+tossings <- c(1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0)
+
+# sequential
+max.values <- c()
+x1.s <- c()
+x2.s <- c()
+for (t in 1:length(tossings)){
+  if (tossings[t] == 1){tails = tails + 1}
+  p.post <- dbeta(x=p, shape1=alpha.prior+tails, shape2=beta.prior+tosses-tails)
+  max.values <- append(max.values, p[which.max(p.post)])
+  x1.s <- append(x1.s, qbeta(0.05, alpha.prior+tails, beta.prior+tosses-tails))   
+  x2.s <- append(x2.s, qbeta(0.95, alpha.prior+tails, beta.prior+tosses-tails))
+}
+
+df.seq <- data.frame(tossings = seq(1, length(tossings),1), most.pos = max.values, cred.interval1 = x1.s, cred.interval2 = x2.s)
+
+ggplot() +
+  geom_point(data = df.seq, aes(x = tossings, y = most.pos, col = "Most probable")) +
+  #geom_ribbon(data = df.seq, aes(ymax=x2, ymin=x1), fill="pink", alpha=.5)+
+  geom_line(data = df.seq, aes(x = tossings, y = cred.interval1, color = "Credibility lower bound"), linetype = 'dashed', size = 0.8) +
+  geom_line(data = df.seq, aes(x = tossings, y = cred.interval2, color = "Credibility upper bound"), linetype = 'dashed',  size = 0.8) +
+  labs(title = "Sequential evaluation of coin tossing", x = "# tossing", y = "Probability of heads") +
+  scale_colour_brewer(palette = "Set2") + ylim(c(0,1)) +
+  scale_x_continuous(breaks = seq(0,30,2)) +
+  guides(color=guide_legend("", order = 5))
+
 ```
 
-c) Repeat the same analysis assuming a sequential analysis of the data. Show how the most probable value and the credibility interval change as a function of the number of coin tosses (i.e. from 1 to 30).
+d)  Do you get a different result, by analyzing the data sequentially with respect to a one-step analysis (i.e. considering all the data as a whole) ?
+
+We obtain the same result.
 
 ```{r}
 
-```
+message('Evaluating all data as a whole:')
+print(paste0('The most probable value is ', max.value, ' with a credibility interval of [', round(x1,2),', ', round(x2,2),']'))
 
-d) Do you get a different result, by analyzing the data sequentially with respect to a one-step analysis (i.e. considering all the data as a whole) ?
+message('Evaluating the data sequentially:')
+print(paste0('The most probable value is ', max.values[30], ' with a credibility interval of [', round(x1.s[30],2),', ', round(x2.s[30],2),']'))
+
+
+```
 
