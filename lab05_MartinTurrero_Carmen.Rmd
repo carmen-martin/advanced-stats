@@ -1,0 +1,427 @@
+---
+title: "Laboratory 05"
+output: html_notebook
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+Carmen Martín Turrero
+
+------------------------------------------------------------------------
+
+Date : 10/05/2022
+
+------------------------------------------------------------------------
+
+```{r}
+library(lubridate)
+library(ggplot2)
+library(GoFKernel)
+library(latex2exp)
+library(dplyr)
+library(plotly)
+```
+
+------------------------------------------------------------------------
+
+## Exercise 1
+
+The number of particles emitted by a radioactive source during a fixed
+interval of time (∆t = 10 s) follows a Poisson distribution on the
+parameter µ. The number of particles observed during consecutive time
+intervals is: 4, 1, 3, 1 and 3
+
+(a) suppose a uniform prior distribution for the parameter µ
+
+-   determine and draw the posterior distribution for µ, given the data
+-   evaluate mean, median and variance, both analytically and
+    numerically in R
+
+```{r}
+# Data
+t.int <- 10 #s
+x.observed <- c(4, 1, 3, 1, 3)
+
+# Uniform prior
+x <- seq(0, 10, by=0.01)
+U.prior <- dgamma(x, 1, 0)
+
+# the posterior is a gamma function with parameters:
+U.alpha <- sum(x.observed) + 1
+U.lambda <- length(x.observed)
+
+U.posterior <- dgamma(x, U.alpha, U.lambda)
+
+uni.df <- data.frame(x = x, prior = U.prior+0.1, posterior = U.posterior)
+
+uni.plot <- ggplot() +
+  geom_line(data = uni.df, aes(x = x, y = prior, color = 'Uniform prior'), linetype =2 , size = 0.8) +
+  geom_line(data = uni.df, aes(x = x, y = posterior, color = 'Posterior'), size = 0.8) +
+  labs(title = 'Particles emitted by radioactive source during 10s', subtitle = 'Poisson Distribution', x = 'n', y = 'PDF') +
+  guides(color=guide_legend(NULL, order = 5)) +
+  scale_colour_brewer(palette = "Paired")
+
+uni.plot
+```
+
+```{r}
+# Analytically
+aU.mean <- (U.alpha-1)/U.lambda
+aU.var <- (U.alpha-1)/(U.lambda**2)
+
+# Numerically
+nU.mean <- integrate(function(x) {x*dgamma(x, U.alpha, U.lambda)}, 0, 10)
+Ex2 <- integrate(function(x) {(x**2)*dgamma(x, U.alpha, U.lambda)}, 0, 10)
+nU.var <- Ex2$value - (nU.mean$value)**2
+
+# We use the quantile to obtain the median
+nU.median <- qgamma(0.5, U.alpha, U.lambda)
+
+message('Analytically: mean = ', aU.mean, ', variance = ', aU.var)
+message('Numerically: mean = ', round(nU.mean$value,2), ', variance = ', round(nU.var,2))
+message('Median = ', round(nU.median,2))
+```
+
+(b) suppose a Jeffrey's prior for the parameter µ
+
+-   determine and draw the posterior distribution for µ, given the data
+-   evaluate mean, median and variance, both analytically and
+    numerically in R
+
+```{r}
+# Jeffreys prior
+x <- seq(0, 10, by=0.01)
+J.prior <- dgamma(x, 0.5, 0)
+
+# the posterior is a gamma function with parameters:
+J.alpha <- sum(x.observed) + 0.5
+J.lambda <- length(x.observed)
+
+J.posterior <- dgamma(x, J.alpha, J.lambda)
+
+jef.df <- data.frame(x = x, prior = J.prior, posterior = J.posterior)
+
+jef.plot <- ggplot() +
+  geom_line(data = jef.df, aes(x = x, y = prior, color = 'Jeffreys prior'), linetype =2 , size = 0.8) +
+  geom_line(data = jef.df, aes(x = x, y = posterior, color = 'Posterior'), size = 0.8) +
+  labs(title = 'Particles emitted by radioactive source during 10s', subtitle = 'Poisson Distribution', x = 'n', y = 'PDF') +
+  guides(color=guide_legend(NULL, order = 5)) +
+  scale_colour_brewer(palette = "Paired")
+
+jef.plot
+```
+
+```{r}
+# Analytically
+aJ.mean <- (J.alpha-0.5)/J.lambda
+aJ.var <- (J.alpha-0.5)/(J.lambda**2)
+
+# Numerically
+nJ.mean <- integrate(function(x) {x*dgamma(x, J.alpha, J.lambda)}, 0, 10)
+Ex2 <- integrate(function(x) {(x**2)*dgamma(x, J.alpha, J.lambda)}, 0, 10)
+nJ.var <- Ex2$value - (nJ.mean$value)**2
+
+# We use the quantile to obtain the median
+nJ.median <- qgamma(0.5, J.alpha, J.lambda)
+
+message('Analytically: mean = ', aJ.mean, ', variance = ', aJ.var)
+message('Numerically: mean = ', round(nJ.mean$value,2), ', variance = ', round(nJ.var,2))
+message('Median = ', round(nJ.median,2))
+```
+
+(c) evaluate a 95% credibility interval for the results obtained with
+    both priors. Compare the result with that obtained using a normal
+    approximation for the posterior distribution, with the same mean and
+    standard deviation
+
+```{r}
+# Most probable value 
+max.valueU <- x[which.max(U.posterior)]
+max.valueJ <- x[which.max(J.posterior)]
+
+# Credibility intervals
+U.x1 <- qgamma(0.025, U.alpha, U.lambda)   
+U.x2 <- qgamma(0.975, U.alpha, U.lambda)
+print(paste0('Uniform prior credibility interval of [', round(U.x1,2),', ', round(U.x2,2),']'))
+
+J.x1 <- qgamma(0.025, J.alpha, J.lambda)   
+J.x2 <- qgamma(0.975, J.alpha, J.lambda)
+print(paste0('Jeffreys prior credibility interval of [', round(J.x1,2),', ', round(J.x2,2),']'))
+
+G.x1 <- qnorm(0.025, aU.mean, sqrt(aU.var))
+G.x2 <- qnorm(0.975, aU.mean, sqrt(aU.var))
+print(paste0('Normal approximation credibility interval of [', round(G.x1,2),', ', round(G.x2,2),']'))
+
+```
+
+------------------------------------------------------------------------
+
+## Exercise 2
+
+Given the problem of the lightouse discussed last week, study the case
+in which both the position along the shore (α) and the distance out at
+sea (β) are unknown.
+
+As discussed during the lectures, it is reasonable to assign a uniform
+likelihood on the azimuth angle $\theta_k$ , given the angle is uniform
+over $\pm \pi/2$, the probability is:
+
+```{=tex}
+\begin{equation}
+P(X |\alpha,\beta) = \frac{1}{\pi}
+\end{equation}
+```
+$\theta_k$ is connected to the distances $\alpha$ and $\beta$ through
+the relation
+
+```{=tex}
+\begin{equation}
+x_k - \alpha = \beta \tan \theta_k
+\end{equation}
+```
+We can perform a change of variable in order to compute
+$P(x|\alpha,\beta)$:
+
+```{=tex}
+\begin{equation}
+P(x|\alpha,\beta) = P(\theta|\alpha,\beta)\abs{\frac{d\theta}{dx}}
+\end{equation}
+```
+Since $x=\beta \tan\theta + \alpha$, by differenciating $\theta$ w.r.t.
+$x$, we obtain:
+
+```{=tex}
+\begin{equation}
+\abs{\frac{d\theta}{dx}} = \frac{\beta^2 + (x - \alpha)^2}{\beta}
+\end{equation}
+```
+And, as a consequence:
+
+```{=tex}
+\begin{equation}
+P(x|\alpha,\beta) = \frac{1}{\pi}\frac{\beta}{\beta^2 + (x - \alpha)^2}
+\end{equation}
+```
+This pdf corresponds to the Cauchy distribution.
+
+Now, since we do not know $\alpha$ nor $\beta$, we estimate their prior.
+As $\alpha \perp \beta$, the posterior is of the form:
+
+```{=tex}
+\begin{equation}
+P(\alpha,\beta |{x_k}) \propto P({x_k}|\alpha,\beta)P(\alpha)P(\beta)
+\end{equation}
+```
+Assuming $\alpha$ is uniform over the segment $[x_{min},\ x_{max}]$,
+i.e. $p(\alpha) = \frac{1}{x_{max} - x_{min}}$; and $\beta$ is uniform
+over the segment $[0, y_{max}]$, i.e. $p(\beta) = \frac{1}{y_{max}}$.
+Then, the posterior is proportional to the likelihood:
+
+```{=tex}
+\begin{equation}
+P(\alpha,\beta |{x_k}) \propto P({x_k}|\alpha,\beta)
+\end{equation}
+```
+For the likelihood, we consider each sample of the data to be iid and,
+therefore:
+
+```{=tex}
+\begin{equation}
+P({x_k}|\alpha,\beta) = \prod_{k=1}^{N} P(x_k|\alpha,\beta)
+\end{equation}
+```
+```{r}
+# Generate dataset
+set.seed(4183)
+# true values
+a <- 10; b <- 10;
+N <- 200
+theta <- runif(N, -pi/2, pi/2)
+x.k <- a*tan(theta) + a
+```
+
+```{r}
+#Set the problem data
+x.min <- -2000 #m
+x.max <- 2000 #m
+y.max <- 5000 #m
+
+alphas <- seq(x.min, x.max, 20)
+betas <- seq(0, y.max, 20)
+```
+
+```{r}
+# Logarithmic posterior
+log.posterior <- function(x.k, alph, bet) {
+  sum(log((bet)/(pi*(bet**2 + (x.k-alph)**2))))
+}
+
+f.aux <- function (a, b){ log.posterior(x.k, a, b) }
+
+# Evaluate for all possible parameter combinations 
+log.grid <- outer(alphas, betas, Vectorize(f.aux))
+
+# Posteriors shape
+# Individual posterior (known alpha)
+log.posterior.ind <- function (x.k, b) {
+  Vectorize(function(a_) {
+    sum(log(b/(pi*(b**2 + (x.k-a_)**2))))
+  })
+}
+
+lpos <- log.posterior.ind(x.k, a)
+
+# Normalize and exponentiate
+shape.posterior <- function (x, lpos) {
+  log.alphas <- lpos(x)
+  log.maxalpha <- max(log.alphas)
+  return (exp(log.alphas - log.maxalpha))
+}
+
+# Obtain the results
+grid.values <- matrix(shape.posterior(log.grid, lpos), 
+                      nrow = length(alphas), ncol = length(betas))
+```
+
+```{r}
+fig <- plot_ly(type = 'surface',x = alphas, y = betas, z = grid.values)
+fig <- layout(fig, scene = list(yaxis = list(title = 'Height (m)',range=c(1900,2100)), xaxis = list(title = 'Location (m)',range = c(-2000,-1900)), zaxis = list(title = 'PDF')))
+
+fig
+```
+
+
+```{r}
+
+max = which(grid.values == max(grid.values), arr.ind = TRUE)
+max.alpha <- alphas[max[1,2]]
+max.beta <- betas[max[1,1]]
+message('The position of the lighthouse is ', (max.alpha)/1000,'km along the shore and ', max.beta/1000, 'km out at sea.')
+```
+
+------------------------------------------------------------------------
+
+## Exercise 3
+
+Given the Signal over Background example discussed last week, analyze
+and discuss the following cases:
+
+(a) vary the sampling resolution of used to generate the data, keeping
+    the same sampling range xdat \<- seq(from=-7*w, to=7*w, by=0.5\*w) •
+    change the resolution w = {0.1, 0.25, 1, 2, 3} • Check the effect on
+    the results
+
+```{r}
+# Generative model
+signal <- function(x, a, b, x0, w, t) {
+  t * (a*exp(-((x-x0)**2)/(2*w**2)) + b)
+}
+
+# Define model parameters
+x0 <- 0 # Signal peak
+w.range <- c(0.1, 0.25, 1, 2, 3) # Signal width
+A.true <- 2 # Signal amplitude
+B.true <- 1 # Background amplitude
+Delta.t <- 5 # Exposure time
+
+# Sampling grid for computing posterior
+alim <- c(0.0, 4.0)
+blim <- c(0.5, 1.5)
+Nsamp <- 100
+uniGrid <- seq(from=1/(2*Nsamp),
+to=1-1/(2*Nsamp), by=1/Nsamp)
+delta_a <- diff(alim )/ Nsamp
+delta_b <- diff(blim )/ Nsamp
+a <- alim[1] + diff(alim )* uniGrid
+b <- blim[1] + diff(blim )* uniGrid
+
+# Log posterior
+log.post <- function(d, x, a, b, x0, w, t) {
+  if(a<0 || b <0) {return(-Inf )} # the effect of the prior
+  sum(dpois(d, lambda=signal(x, a, b, x0, w, t), log=TRUE))
+}
+
+# Generate the observed data
+set.seed(123)
+for (w in w.range){
+  xdat <- seq(from=-7*w, to=7*w, by=0.5*w)
+  
+  s.true <- signal(xdat , A.true , B.true , x0, w, Delta.t)
+  ddat <- rpois(length(s.true), s.true)
+  xplot <- seq(from=min(xdat), to=max(xdat), by=0.05*w)
+  splot <- signal(xplot , A.true , B.true , x0, w, Delta.t)
+  options(repr.plot.width=14, repr.plot.height=10)  #to set graph size
+  par(mfrow=c(1,2))
+  plot(xplot , splot , xlab="x", ylab="Signal+Background counts", ylim=c(2, 24))
+  #par(new=TRUE)
+  xdat.off <- xdat - 0.25
+  lines(xdat.off, ddat , type='s',col='firebrick3', lwd=2,xlim=range(xplot), ylim=range(c(splot , ddat )))
+  
+  # Compute log unnormalized posterior , z = ln Pˆ*(a,b|D), on a regular grid
+  z <- matrix(data=NA , nrow=length(a), ncol=length(b))
+  for(j in 1:length(a)) {
+    for(k in 1:length(b)) {
+      z[j,k] <- log.post(ddat , xdat , a[j], b[k], x0, w, Delta.t)
+    }
+  }
+  z <- z - max(z) # set maximum to zero
+  # Plot unnormalized 2D posterior as contours.
+  contour(a, b, exp(z),
+          nlevels = 5,
+          labcex = 0.5,
+          lwd = 2,
+          xlab="amplitude , A",
+          ylab="background , B")
+  abline(v=2,h=1,col="grey")
+}
+
+
+```
+
+(b) change the ratio A/B used to simulate the data (keeping both
+    positive in accordance with the prior) • Check the effect on the
+    results
+
+```{r}
+
+# Define model parameters
+x0 <- 0 # Signal peak
+w.range <- 1 # Signal width
+A.true <- 4 # Signal amplitude
+B.true <- 1 # Background amplitude
+Delta.t <- 5 # Exposure time
+
+xdat <- seq(from=-7*w, to=7*w, by=0.5*w)
+  
+s.true <- signal(xdat , A.true , B.true , x0, w, Delta.t)
+ddat <- rpois(length(s.true), s.true)
+xplot <- seq(from=min(xdat), to=max(xdat), by=0.05*w)
+splot <- signal(xplot , A.true , B.true , x0, w, Delta.t)
+options(repr.plot.width=14, repr.plot.height=10)  #to set graph size
+par(mfrow=c(1,2))
+plot(xplot , splot , xlab="x", ylab="Signal+Background counts", ylim=c(0, 40))
+#par(new=TRUE)
+xdat.off <- xdat - 0.25
+lines(xdat.off, ddat , type='s',col='firebrick3', lwd=2,xlim=range(xplot), ylim=range(c(splot , ddat )))
+
+# Compute log unnormalized posterior , z = ln Pˆ*(a,b|D), on a regular grid
+z <- matrix(data=NA , nrow=length(a), ncol=length(b))
+for(j in 1:length(a)) {
+  for(k in 1:length(b)) {
+    z[j,k] <- log.post(ddat , xdat , a[j], b[k], x0, w, Delta.t)
+  }
+}
+z <- z - max(z) # set maximum to zero
+# Plot unnormalized 2D posterior as contours.
+contour(a, b, exp(z),
+        nlevels = 4,
+        labcex = 0.5,
+        lwd = 2,
+        xlab="amplitude , A",
+        ylab="background , B",
+        xlim = c(0,5))
+abline(v=4,h=1,col="grey")
+
+
+```

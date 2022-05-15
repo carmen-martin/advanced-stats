@@ -97,7 +97,6 @@ r.triangular <- function(N, a, b, c){
 
 ```
 
-
 1.c. Generate $10^4$ random numbers from the distribution, show them in an histogram and superimpose the analytical curve.
 
 ```{r}
@@ -494,7 +493,6 @@ probs.plot(trials, data0, data1, data2, data3, data4, data5)
 
 ```
 
-
 ------------------------------------------------------------------------
 
 ## Exercise 5 - Six Boxes Toy Model: simulation
@@ -523,7 +521,6 @@ message("Selected box is: ", box_labels[box.index])
 
 samples <- rbinom(100, 1, 1-pblack_bybox[box.index])
 ```
-
 
 ```{r}
 # Study the probability of having selected each box based on the sampling
@@ -556,7 +553,6 @@ for (extraction in samples){
   previous <- probs
 }
 ```
-
 
 ```{r}
 # Print the final values and plot the estimation over time
