@@ -1,0 +1,656 @@
+---
+title: "Laboratory 06"
+output: html_notebook
+---
+
+Carmen Martín Turrero
+
+------------------------------------------------------------------------
+
+Date : 05/06/2022
+
+------------------------------------------------------------------------
+
+```{r}
+library(ggplot2)
+library(GoFKernel)
+library(latex2exp)
+library(ggpubr)
+```
+
+```{r}
+library(ramify)
+library(coda)
+library(bayesplot)
+```
+
+```{r}
+library(rjags)
+```
+
+------------------------------------------------------------------------
+
+## Exercise 1
+
+• a well established and diffused method for detecting a disease in blood fails to detect the presence of disease in 15% of the patients that actually have the disease. • A young UniPD startUp has developed an innovative method of screening. During the qualification phase, a random sample of n = 75 patients known to have the disease is screened using the new method.
+
+(a) what is the probability distribution of y, the number of times the new method fails to detect the disease ?
+
+The method either fails or not fails. Therefore, it follows a Binomial Distribution. Being $p$ the probability that the method fails and $n$ the number of tests, the probability distribution of y (number of failed tests) is:
+
+$P(y|n,p) = \binom{n}{y}p^{y}(1-p)^{n-y}$
+
+```{r}
+
+# Number of tests with new method
+n <- 75
+
+# Distribution to use: binomial
+
+```
+
+(b) on the n = 75 patients sample, the new method fails to detect the disease in y = 6 cases. What is the frequentist estimator of the failure probability of the new method ?
+
+From the frequentist approach, the probability of failure of the new method is:
+
+$P = \frac{y}{n} = \frac{6}{75}$
+
+```{r}
+# false negatives
+y <- 6 
+
+# frequentist probability
+prob.freq <- y/n
+```
+
+(c) setup a bayesian computation of the posterior probability, assuming a beta distribution with mean value 0.15 and standard deviation 0.14. Plot the posterior distribution for y, and mark on the plot the mean value and variance
+
+```{r}
+
+# Mean and standard deviation of beta prior
+p.prior <- 0.15
+std.prior <- 0.14
+
+# Beta prior parameters from the mean and the sd 
+
+a.prior <- p.prior*((p.prior*(p.prior)/std.prior**2) - 1)
+b.prior <- (1 - p.prior)*((p.prior*(1 - p.prior)/std.prior**2) - 1)
+
+# Prior
+p <- seq(0,0.25,length.out = 1000)
+prior = dbeta(p, a.prior, b.prior)
+
+# A binomial likelihood and a beta prior, yield a beta posterior as a result
+
+a.post <- a.prior + y
+b.post <- b.prior + n - y
+
+# Mean and std of the posterior
+p.post <- a.post/(a.post + b.post)
+std.post <- sqrt((a.post*b.post)/((a.post + b.post)**2*(a.post + b.post + 1)))
+
+# Posterior
+posterior = dbeta(p, a.post, b.post)
+
+df.tests <- data.frame(x = p, prior = prior, posterior = posterior)
+
+
+tests.plot <- ggplot() +
+  geom_line(data = df.tests, aes(x=x, y=posterior, colour=('Posterior')))+
+  geom_line(data = df.tests, aes(x=x, y=prior, colour = ('Prior'))) +
+  geom_vline(aes(xintercept = p.post, colour = paste0('μ = ', round(p.post,2))), size = 0.5) +
+  geom_vline(aes(xintercept = p.post - std.post, colour = paste0('μ +/- σ')), size = 0.5) +
+  geom_vline(aes(xintercept = p.post + std.post, colour = paste0('μ +/- σ')), size = 0.5) +
+  ylim(c(0, 20)) +
+  geom_rect(aes(xmin=p.post - std.post, xmax=p.post + std.post, ymin=0, ymax=Inf), fill = 'chartreuse4', alpha = 0.1)+
+  labs(title = "New method failures", x = "p", y = "pdf")+
+  guides(color=guide_legend(NULL, order = 5))
+
+
+tests.plot
+```
+
+(d) Perform a test of hypothesis assuming that if the probability of failing to detect the desease in ill patients is greater or equal than 15%, the new test is no better that the traditional method. Test the sample at a 5% level of significance in the Bayesian way.
+
+```{r}
+
+# Test at a 5% level of significance
+tail <- qbeta(0.05, a.post, b.post)
+p <- seq(0, 1, length.out=100)
+posterior = dbeta(p, a.post, b.post)
+
+df.probs <- data.frame(x = p, post = posterior)
+
+pvalue <- pbeta(0.15, a.post, b.post, lower.tail = FALSE)
+
+bayesian <- ggplot() +
+  geom_line(aes(x = df.probs[, 1], y = df.probs[, 2])) +
+  geom_vline(aes(xintercept = tail, colour = paste0('5% interval')), size = 0.5) +
+  geom_vline(aes(xintercept = pvalue, colour = paste0('pvalue (for 15%)')), size = 0.5) +
+  labs(title = "Bayesian Hypothesis", x = "p", y = "pdf")+
+  xlim(c(0, 0.5)) +
+  guides(color=guide_legend(NULL, order = 5))
+  
+  
+
+bayesian
+
+print(paste('The Bayesian approach leads to rejecting the null hypothesis at a 5% level of significance, since the p-value is of', round(pvalue*100,2), '%'))
+
+```
+
+(e) Perform the same hypothesis test in the classical frequentist way.
+
+```{r}
+
+# Test at a 5% level of significance
+tail_freq <- qbinom(0.05, size = n, prob = 0.15)
+print(tail)
+trials <- c(0:n)
+cdf <- pbinom(trials, size=n, prob = 0.15)
+
+df.probs <- data.frame(x = trials, CDF = cdf)
+
+pvalue <- pbinom(y, size=n, prob = 0.15)
+
+frequentist <- ggplot(data=df.probs, aes(x=trials, y=CDF)) +
+  geom_bar(stat="identity", fill="blue", alpha = 0.7)+
+  geom_hline(aes(yintercept = pvalue, colour = paste0('pvalue (for 15%)')), size = 0.5) +
+  geom_point(aes(x = tail_freq,y = cdf[6], colour = paste0('5% interval')), size = 0.5) +
+  labs(title = "Frequentist Hypothesis", x = "trial", y = "cdf")+
+  xlim(c(0,15))+
+  guides(color=guide_legend(NULL, order = 5))
+  
+  
+
+frequentist
+
+print(paste('The Frequentist approach leads to NOT rejecting the null hypothesis at a 5% level of significance, since the p-value is of', round(pvalue*100,2), '%'))
+
+
+```
+
+------------------------------------------------------------------------
+
+## Exercise 4
+
+• analyze the data of Exercise 1 using a MCMC with JAGS (solve only point a of Ex 1)
+
+```{r}
+modelString <- "
+model {
+  # Likelihood
+  y ~ dbinom(theta, n)
+  
+  # Prior
+  theta ~ dbeta(a, b)
+} "
+```
+
+```{r}
+data <- list(y = y, n = n, a=a.post, b=b.post)
+
+model <- jags.model(file = textConnection(modelString), data= data)
+
+#burn in 
+update(model, n.iter = 1000)
+
+# Number of simulated values
+Nrep <- 10000 
+
+#posterior
+posterior_sample <- coda.samples(model, variable.names = c("theta"), n.iter = Nrep)
+
+```
+
+```{r}
+# Tables and plots
+summary(posterior_sample)
+plot(posterior_sample)
+mcmc_hist(posterior_sample)
+```
+
+------------------------------------------------------------------------
+
+## Exercise 2
+
+• Ladislaus Josephovich Bortkiewicz was a Russian economist and statistician. He noted that the Poisson distribution can be very useful in applied statistics when describing low-frequency events in a large population. In a famous example he showed that the number of deaths by horse kick among the Prussian army follows the Poisson distribution.
+
+• Considering the following to sets of observations taken over a fixed large time interval in two different corps:
+
+```{r}
+
+y <- c(0, 1, 2, 3, 4, '≥ 5')
+n1 <- c(109, 65, 22, 3, 1, 0)
+n2 <- c(144, 91, 32, 11, 2, 0)
+
+```
+
+(a) assuming a uniform prior, compute and plot the posterior distribution for λ, the death rate over the measurement time. Determine the posterior mean, median and variance, and compute the 95% credibility interval.
+
+```{r}
+
+tot1 <- sum(n1)
+tot2 <- sum(n2)
+
+deaths <- c(0,1,2,3,4,5)
+
+
+# Posterior distribution
+u.prior <- function(x){dunif(x, 0, 5)}
+u.alpha <- sum(n1*deaths) + 1
+u.post <- function(x){return (dgamma(x, shape = u.alpha, rate = tot1))}
+
+# Plot
+steps <- 0.002
+p <- seq(0, 5, steps)
+
+df.u <- data.frame(x = p, prior = u.prior(p), post = u.post(p))
+
+u.plot <- ggplot() +
+  geom_line(data = df.u, aes(x=x, y= prior, colour = 'Uniform Prior'), linetype ='dashed', size = 0.7) +
+  geom_line(data = df.u, aes(x=x, y = post, colour = 'Posterior'), size = 0.7) +
+  labs(title = "Uniform Prior", x = "p", y = "pdf") +
+  guides(color=guide_legend(NULL, order = 5))
+
+u.plot
+
+
+# Statistical quantities
+u.median <- qgamma(0.5, shape = u.alpha, rate = tot1)
+u.mean <- u.alpha/tot1
+u.var <- u.alpha/(tot1**2)
+
+print(paste('Median:', u.median, 'Mean:', u.mean, 'Variance:', u.var))
+
+
+# Credibility interval of 95%
+u.upper <- qgamma(1-0.025, shape = u.alpha, rate = tot1)
+u.lower <- qgamma(0.025, shape = u.alpha, rate = tot1)
+
+u95.plot <- ggplot() +
+  geom_line(data = df.u, aes(x=x, y = post, colour = 'Posterior'), size = 0.7) +
+  geom_vline(aes(xintercept = u.mean, colour = paste0('μ = ', round(u.mean,2))), size = 0.5) +
+  geom_vline(aes(xintercept = u.median, colour = paste0('median =', round(u.median,2))), size = 0.5) +
+  geom_vline(aes(xintercept = u.upper, colour = paste0('Cred interval')), size = 0.5) +
+  geom_vline(aes(xintercept = u.lower, colour = paste0('Cred interval')), size = 0.5) +
+  #ylim(c(0, 20)) +
+  geom_rect(aes(xmin=u.lower, xmax=u.upper, ymin=0, ymax=Inf), fill = 'chartreuse4', alpha = 0.1)+
+  labs(title = "Deaths by horse kick among the Prussian army", subtitle = "Uniform Prior", x = "p", y = "pdf")+
+  guides(color=guide_legend(NULL, order = 5))
+
+u95.plot
+
+```
+
+(b) assuming now a Jeffreys' prior, g(λ) ∝ 1/√λ , with λ \> 0, compute and plot the posterior distribution for λ, the death rate over the measurement time. Determine the posterior mean, median and variance, and compute the 95% credibility interval.
+
+```{r}
+
+# Posterior distribution
+j.prior <- function(x){
+  norm <- integrate(function(p){1/sqrt(p)}, lower = 0, upper = 5)$value
+    return ((1/sqrt(p))/norm)
+}
+j.alpha <- sum(n1*deaths) + 0.5
+j.post <- function(x){return (dgamma(x, shape = j.alpha, rate = tot1))}
+
+# Plot
+df.j <- data.frame(x = p, prior = j.prior(p), post = j.post(p))
+
+j.plot <- ggplot() +
+  geom_line(data = df.j, aes(x=x, y= prior, colour = 'Jeffreys Prior'), linetype ='dashed', size = 0.7) +
+  geom_line(data = df.j, aes(x=x, y = post, colour = 'Posterior'), size = 0.7) +
+  labs(title = "Jeffreys Prior", x = "p", y = "pdf") +
+  guides(color=guide_legend(NULL, order = 5))
+
+j.plot
+
+
+# Statistical quantities
+j.median <- qgamma(0.5, shape = j.alpha, rate = tot1)
+j.mean <- j.alpha/tot1
+j.var <- j.alpha/(tot1**2)
+
+print(paste('Median:', j.median, 'Mean:', j.mean, 'Variance:', j.var))
+
+
+# Credibility interval of 95%
+j.upper <- qgamma(1-0.025, shape = j.alpha, rate = tot1)
+j.lower <- qgamma(0.025, shape = j.alpha, rate = tot1)
+
+j95.plot <- ggplot() +
+  geom_line(data = df.j, aes(x=x, y = post, colour = 'Posterior'), size = 0.7) +
+  geom_vline(aes(xintercept = j.mean, colour = paste0('μ = ', round(j.mean,2))), size = 0.5) +
+  geom_vline(aes(xintercept = j.median, colour = paste0('median =', round(j.median,2))), size = 0.5) +
+  geom_vline(aes(xintercept = j.upper, colour = paste0('Cred interval')), size = 0.5) +
+  geom_vline(aes(xintercept = j.lower, colour = paste0('Cred interval')), size = 0.5) +
+  #ylim(c(0, 20)) +
+  geom_rect(aes(xmin=j.lower, xmax=j.upper, ymin=0, ymax=Inf), fill = 'chartreuse4', alpha = 0.1)+
+  labs(title = "Deaths by horse kick among the Prussian army", subtitle = "Jeffrey's Prior", x = "p", y = "pdf")+
+  guides(color=guide_legend(NULL, order = 5))
+
+j95.plot
+
+```
+
+```{r}
+
+# For the second dataset
+# Posterior distribution
+u.prior <- function(x){dunif(x, 0, 5)}
+u.alpha <- sum(n1*deaths) + 1
+u.post <- function(x){return (dgamma(x, shape = u.alpha, rate = tot2))}
+
+# Plot
+steps <- 0.002
+p <- seq(0, 5, length.out=1/steps)
+
+df.u <- data.frame(x = p, prior = u.prior(p), post = u.post(p))
+
+u.plot <- ggplot() +
+  geom_line(data = df.u, aes(x=x, y= prior, colour = 'Uniform Prior'), linetype ='dashed', size = 0.7) +
+  geom_line(data = df.u, aes(x=x, y = post, colour = 'Posterior'), size = 0.7) +
+  labs(title = "Uniform Prior", x = "p", y = "pdf") +
+  guides(color=guide_legend(NULL, order = 5))
+
+u.plot
+
+
+# Statistical quantities
+u.median <- qgamma(0.5, shape = u.alpha, rate = tot2)
+u.mean <- u.alpha/tot2
+u.var <- u.alpha/(tot2**2)
+
+print(paste('Median:', u.median, 'Mean:', u.mean, 'Variance:', u.var))
+
+
+# Credibility interval of 95%
+u.upper <- qgamma(1-0.025, shape = u.alpha, rate = tot2)
+u.lower <- qgamma(0.025, shape = u.alpha, rate = tot2)
+
+u95.plot <- ggplot() +
+  geom_line(data = df.u, aes(x=x, y = post, colour = 'Posterior'), size = 0.7) +
+  geom_vline(aes(xintercept = u.mean, colour = paste0('μ = ', round(u.mean,2))), size = 0.5) +
+  geom_vline(aes(xintercept = u.median, colour = paste0('median =', round(u.median,2))), size = 0.5) +
+  geom_vline(aes(xintercept = u.upper, colour = paste0('Cred interval')), size = 0.5) +
+  geom_vline(aes(xintercept = u.lower, colour = paste0('Cred interval')), size = 0.5) +
+  #ylim(c(0, 20)) +
+  geom_rect(aes(xmin=u.lower, xmax=u.upper, ymin=0, ymax=Inf), fill = 'chartreuse4', alpha = 0.1)+
+  labs(title = "Deaths by horse kick among the Prussian army", subtitle = "Uniform Prior", x = "p", y = "pdf")+
+  guides(color=guide_legend(NULL, order = 5))
+
+u95.plot
+
+
+```
+
+```{r}
+# Second dataset
+# Posterior distribution
+j.prior <- function(x){
+  norm <- integrate(function(p){1/sqrt(p)}, lower = 0, upper = 5)$value
+    return ((1/sqrt(p))/norm)
+}
+j.alpha <- sum(n1*deaths) + 0.5
+j.post <- function(x){return (dgamma(x, shape = j.alpha, rate = tot2))}
+
+# Plot
+df.j <- data.frame(x = p, prior = j.prior(p), post = j.post(p))
+
+j.plot <- ggplot() +
+  geom_line(data = df.j, aes(x=x, y= prior, colour = 'Jeffreys Prior'), linetype ='dashed', size = 0.7) +
+  geom_line(data = df.j, aes(x=x, y = post, colour = 'Posterior'), size = 0.7) +
+  labs(title = "Jeffreys Prior", x = "p", y = "pdf") +
+  guides(color=guide_legend(NULL, order = 5))
+
+j.plot
+
+
+# Statistical quantities
+j.median <- qgamma(0.5, shape = j.alpha, rate = tot2)
+j.mean <- j.alpha/tot2
+j.var <- j.alpha/(tot2**2)
+
+print(paste('Median:', j.median, 'Mean:', j.mean, 'Variance:', j.var))
+
+
+# Credibility interval of 95%
+j.upper <- qgamma(1-0.025, shape = j.alpha, rate = tot2)
+j.lower <- qgamma(0.025, shape = j.alpha, rate = tot2)
+
+j95.plot <- ggplot() +
+  geom_line(data = df.j, aes(x=x, y = post, colour = 'Posterior'), size = 0.7) +
+  geom_vline(aes(xintercept = j.mean, colour = paste0('μ = ', round(j.mean,2))), size = 0.5) +
+  geom_vline(aes(xintercept = j.median, colour = paste0('median =', round(j.median,2))), size = 0.5) +
+  geom_vline(aes(xintercept = j.upper, colour = paste0('Cred interval')), size = 0.5) +
+  geom_vline(aes(xintercept = j.lower, colour = paste0('Cred interval')), size = 0.5) +
+  #ylim(c(0, 20)) +
+  geom_rect(aes(xmin=j.lower, xmax=j.upper, ymin=0, ymax=Inf), fill = 'chartreuse4', alpha = 0.1)+
+  labs(title = "Deaths by horse kick among the Prussian army", subtitle = "Jeffrey's Prior", x = "p", y = "pdf")+
+  guides(color=guide_legend(NULL, order = 5))
+
+j95.plot
+```
+
+------------------------------------------------------------------------
+
+## Exercise 5
+
+• analyze the data of Exercise 2 using a MCMC with JAGS
+
+```{r}
+
+data1 <- c(rep(0,109), rep(1,65), rep(2,22), rep(3, 3), rep(4,1))
+meas1 <- length(data1)
+
+data2 <- c(rep(0,44), rep(1, 92), rep(2,32), rep(3,11), rep(4,2))
+meas2 <- length(data2)
+```
+
+```{r}
+model_string <- "model{
+  # Likelihood
+  for (i in 1:n){
+    y[i] ~ dpois(theta)
+  }
+
+  # Prior
+  theta ~ dunif(0, 100)
+}"
+
+```
+
+```{r}
+# First set
+
+data <- list(y = data1, n = meas1)
+
+model <- jags.model(file = textConnection(model_string), data = data)
+
+#burn in
+update(model, n.iter = 1000)
+
+# Number of simulations
+N <- 100000 
+
+# Posterior
+posterior_sample <- coda.samples(model, variable.names = c("theta"), n.iter = N)
+
+# Table and plot
+summary(posterior_sample)
+plot(posterior_sample)
+```
+
+```{r}
+
+# Second set
+data <- list(y = data2, n = meas2)
+model <- jags.model(file = textConnection(model_string), data = data)
+
+#burn in
+update(model, n.iter = 1000)
+N <- 10000
+posterior_sample <- coda.samples(model, variable.names = c("theta"), n.iter = N)
+
+# Table and plot
+summary(posterior_sample)
+plot(posterior_sample)
+
+```
+
+------------------------------------------------------------------------
+
+## Exercise 3
+
+• A study on water quality of streams, a high level of bacter X was defined as a level greater than 100 per 100 ml of stream water. n = 116 samples were taken from streams having a high environmental impact on pandas. Out of these, y = 11 had a high bacter X level.
+
+• indicating with p the probability that a sample of water taken from the stream has a high bacter X level,
+
+(a) find the frequentist estimator for p
+
+```{r}
+
+n <- 116
+y <- 11
+p <- y/n
+
+print(p)
+
+```
+
+(b) using a Beta(1, 10) prior for p, calculate the posterior distribution P(p\|y)
+
+```{r}
+# Beta prior
+a <- 1; b<- 10;
+
+a.post <- a + y
+b.post <- b + n - y
+
+p <- seq(0, 1, 0.001)
+
+prior <- dbeta(p, shape1 = a, shape2 = b)
+posterior <- dbeta(p, shape1 = a.post, shape2 = b.post)
+```
+
+(c) find the bayesian estimator for p, the posterior mean and variance, and a 95% credible interval
+
+```{r}
+# Bayesian p
+p.est <- p[which.max(posterior)]
+p.mean <- a.post/(a.post+b.post)
+b.variance <- a.post*b.post/(a.post+b.post)**2 /(a.post+b.post+1)
+
+print(paste(p.mean, '+/-', b.variance))
+
+upp <- qbeta(1-0.025, shape1 = a.post, shape2 = b.post)
+low <- qbeta(0.025, shape1 = a.post, shape2 = b.post)
+```
+
+(d) test the hypotesis $H_{o} : p = 0.1\ versus\ H_1 : p \neq 0.1$ at 5% level of significance with both the frequentist and bayesian approach
+
+```{r}
+# Frequentist
+p.01 <- dbinom(y, prob=0.1, size=n)
+print(paste("F: p(y=11|n=116, p=0.1)=", p.01, "> 0.05, then we can't reject the hypothesis p=0.1"))
+
+# Bayesian
+print(paste("B: The 95% credibility interval for p: [",low, ",", upp,"] and p=0.1 lies in that interval. Therefore, we can't reject the hypothesis."))
+```
+
+• a new measurement, performed one month later on n = 165 water samples, gives y = 9 high bacter X level
+
+(e) find the frequentist estimator for p
+
+```{r}
+n <- 165
+y <- 9
+p <- y/n
+
+print(p)
+```
+
+(f) find a bayesian estimator for p, assuming both a Beta(1, 10) prior for p, and assuming the posterior probability of the older measurement as the prior for the new one.
+
+```{r}
+# Beta prior
+a <- 1; b<- 10;
+
+a.post <- a + y
+b.post <- b + n - y
+
+p <- seq(0, 1, 0.001)
+
+prior <- dbeta(p, shape1 = a, shape2 = b)
+posterior <- dbeta(p, shape1 = a.post, shape2 = b.post)
+
+p.est <- p[which.max(posterior)]
+print(paste('Bayesian estimation with beta prior, p =', p.est))
+
+# Now we use as prior the previous posterior
+y1 <- 11; n1 <- 116;
+a.post2 <- 1 + y + y1
+b.post2 <- 10 + n - y + n1 - y1
+posterior2.new <- dbeta(p, a.post2, b.post2)
+
+p.est2 <- p[which.max(posterior2.new)]
+print(paste('Bayesian estimation with previous estimation prior, p =', p.est2))
+```
+
+(g) find the bayesian estimator for p, the posterior mean and variance, and a 95% credible interval
+
+```{r}
+p.mean <- a.post2/(a.post2+b.post2)
+b.variance <- a.post2*b.post2/(a.post2+b.post2)**2/(a.post2+b.post2+1)
+print(paste('mean:', p.mean, 'var:', b.variance))
+low <- qbeta(0.025, a.post2, b.post2)
+upp <- qbeta(1-0.025, a.post2, b.post2)
+print(paste("95% credibility interval for p: [", low, ",", upp,"]"))
+```
+
+(h) test the hypotesis $H_o : p = 0.1\ versus\ H_1 : p \neq 0.1$ at 5% level of significance with both the frequentist and bayesian approach
+
+```{r}
+
+# Frequentist
+p.01 <- dbinom(y, prob=0.1, size=n)
+print(paste('F: p(Y=9|n=165, p=0.1)=', p.01, '< 0.05, then we can reject the hypothesis p=0.1'))
+
+# Bayesian
+print('B: By taking as prior the posterior of the previous study we cannot reject the hypothesis p=0.1')
+
+```
+
+------------------------------------------------------------------------
+
+## Exercise 6
+
+• analyze the data of Exercise 3 using a MCMC with JAGS (solve point b and c)
+
+```{r}
+
+modelString <- "
+model {
+  # Likelihood
+  y ~ dbinom(theta, n)
+  
+  # Prior
+  theta ~ dbeta(1, 10)
+} "
+```
+
+```{r}
+data <- list(y = y, n = n)
+model <- jags.model(file = textConnection(modelString), data=data)
+
+#burn in
+update(model, n.iter = 1000)
+N <- 10000 
+posterior_sample <- coda.samples(model, variable.names = c("theta"), n.iter = N)
+
+# results
+summary(posterior_sample)
+plot(posterior_sample)
+
+```
